@@ -67,7 +67,7 @@ public class DevicesFragment extends Fragment {
                         Log.i("user input", " " + m_Text1);
                         Log.i("user input", " " + m_Text2);
                         Log.i("user input", " " + m_Text3);
-                        MainActivity.Device device = new MainActivity.Device(MainActivity.devices.size(), m_Text1, m_Text2, m_Text3, 150, 150, 500, 500, true) ;
+                        MainActivity.Device device = new MainActivity.Device(MainActivity.devices.size(), m_Text1, m_Text2, m_Text3, 150, 150, 500, 500, "true") ;
                         MainActivity.devices.add(device);
                         addItems(listv, device);
                         //TODO: publish device to cloud database?

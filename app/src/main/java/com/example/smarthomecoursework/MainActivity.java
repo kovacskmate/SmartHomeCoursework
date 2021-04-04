@@ -38,8 +38,6 @@ public class MainActivity extends AppCompatActivity {
 
     public static List<Device> devices = new ArrayList<Device>();
 
-    public ParticleDevice particleDevice;
-
     AsyncTask<Void, Void, String> runningTask;
 
     public static class Device{
@@ -51,9 +49,8 @@ public class MainActivity extends AppCompatActivity {
         public int height;
         public int leftMargin;
         public int topMargin;
-        public boolean status;
 
-        public Device(int id, String name, String type, String pin, int width, int height, int leftMargin, int topMargin, boolean status) {
+        public Device(int id, String name, String type, String pin, int width, int height, int leftMargin, int topMargin, String status) {
             this.id = id;
             this.name = name;
             this.type = type;
@@ -64,8 +61,10 @@ public class MainActivity extends AppCompatActivity {
             this.topMargin = topMargin;
             this.status = status;
         }
-    }
 
+        public String status;
+
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,8 +75,8 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         //TODO: populate list from cloud?
-        devices.add(new Device(0, "first", "light","D7",350,350, 250, 250, true));
-        devices.add(new Device(1, "second", "door","D3",350,350, 250, 650, true));
+        //devices.add(new Device(0, "first", "light","D7",350,350, 250, 250, true));
+        //devices.add(new Device(1, "second", "door","D3",350,350, 250, 650, true));
 
 //        FloatingActionButton fab = findViewById(R.id.fab);
 //        fab.setOnClickListener(new View.OnClickListener() {
@@ -99,14 +98,6 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
         NavigationUI.setupWithNavController(navigationView, navController);
-
-
-
-//        if (runningTask != null)
-//            runningTask.cancel(true);
-//        runningTask = new LongOperation();
-//        runningTask.execute();
-
     }
 
     @Override
@@ -130,39 +121,4 @@ public class MainActivity extends AppCompatActivity {
         if (runningTask != null)
             runningTask.cancel(true);
     }
-
-    private final class LongOperation extends AsyncTask<Void, Void, String> {
-
-        @Override
-        protected String doInBackground(Void... params) {
-            try {
-                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "F12f85995");
-            } catch (ParticleLoginException e) {
-                e.printStackTrace();
-            }
-            try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
-            } catch (ParticleCloudException e) {
-                e.printStackTrace();
-            }
-            try {
-                particleDevice.callFunction("brew", Collections.singletonList("coffee"));
-            } catch (ParticleCloudException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ParticleDevice.FunctionDoesNotExistException e) {
-                e.printStackTrace();
-            }
-            Log.i("async", "finished");
-            return "Executed";
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            // You might want to change "executed" for the returned string
-            // passed into onPostExecute(), but that is up to you
-        }
-    }
-
 }

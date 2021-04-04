@@ -25,7 +25,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import io.particle.android.sdk.cloud.ParticleCloudSDK;
 import io.particle.android.sdk.cloud.ParticleDevice;
@@ -46,7 +48,7 @@ public class HomeFragment extends Fragment {
     ParticleDevice particleDevice;
 
     AsyncTask<Void, Void, String> runningTask;
-    boolean status = false;
+    String status = "false";
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         root = inflater.inflate(R.layout.fragment_home, container, false);
@@ -60,13 +62,13 @@ public class HomeFragment extends Fragment {
     }
 
 
-    public void DrawDevice(int id, String name, int width, int height, int leftMargin, int topMargin, boolean status){
+    public void DrawDevice(int id, String name, int width, int height, int leftMargin, int topMargin, String status){
         //move to class?
         // Initialize a new ImageView widget
         ImageView iv = new ImageView(MainActivity.myapp);
         iv.setId(id);
         // Set an image for ImageView
-        if(status){
+        if(status == "true"){
             iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_camera));
         } else{
             iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_gallery));
@@ -104,23 +106,25 @@ public class HomeFragment extends Fragment {
 
                         ImageView imgView = root.findViewById(view.getId());
                         //TODO: set image resource according to type AND status
-                        if(MainActivity.devices.get(view.getId()).status){
+                        if(MainActivity.devices.get(view.getId()).status == "true"){
                             imgView.setImageResource(R.drawable.ic_menu_gallery);
-                            MainActivity.devices.get(view.getId()).status = false;
-
-                            if (runningTask != null)
-                                runningTask.cancel(true);
-                            runningTask = new LongOperation();
-                            runningTask.execute();
+                            MainActivity.devices.get(view.getId()).status = "false";
+//
+//                            if (runningTask != null)
+//                                runningTask.cancel(true);
+//                            runningTask = new LongOperation();
+//                            runningTask.execute();
+                            new LongOperation().execute(MainActivity.devices.get(view.getId()).id);
 
                         } else{
                             imgView.setImageResource(R.drawable.ic_menu_camera);
-                            MainActivity.devices.get(view.getId()).status = true;
+                            MainActivity.devices.get(view.getId()).status = "true";
 
-                            if (runningTask != null)
-                                runningTask.cancel(true);
-                            runningTask = new LongOperation();
-                            runningTask.execute();
+//                            if (runningTask != null)
+//                                runningTask.cancel(true);
+//                            runningTask = new LongOperation();
+//                            runningTask.execute();
+                            new LongOperation().execute(MainActivity.devices.get(view.getId()).id);
 
                         }
                         //TODO: publish status to cloud
@@ -152,30 +156,25 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    private final class LongOperation extends AsyncTask<Void, Void, String> {
-
+    private final class LongOperation extends AsyncTask<Integer, Integer, String> {
         @Override
-        protected String doInBackground(Void... params) {
-
-
+        protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("asd@email.com", "password");
+                ParticleCloudSDK.getCloud().logIn("asd@asd.com", "asd");
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("yourdeviceid");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
             try {
-                if(status){
-                    particleDevice.callFunction("brew", Collections.singletonList("dasdasd"));
-                    status = false;
-                } else{
-                    particleDevice.callFunction("brew", Collections.singletonList("coffee"));
-                    status = true;
-                }
+                List<String> someList = new ArrayList<String>();
+                someList.add(MainActivity.devices.get(params[0]).type);
+                someList.add(MainActivity.devices.get(params[0]).pin);
+                someList.add(MainActivity.devices.get(params[0]).status);
+                particleDevice.callFunction("brew", someList);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             } catch (IOException e) {
