@@ -11,6 +11,6 @@
     <string name="menu_devices">Devices</string>
     <string name="menu_placeholder">Placeholder</string>
     <string name="button_addDevice">Create new device</string>
-    <string name="button_applyChanges">Apply changes</string>
+    <string name="button_deleteDevices">Delete devices</string>
     <string name="hint_device">Device hint</string>
 </resources>

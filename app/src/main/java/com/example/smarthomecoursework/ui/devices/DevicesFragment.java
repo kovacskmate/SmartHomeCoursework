@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.smarthomecoursework.MainActivity;
 import com.example.smarthomecoursework.R;
+import com.example.smarthomecoursework.SaveManager;
 
 import java.util.ArrayList;
 
@@ -35,12 +36,13 @@ public class DevicesFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_devices, container, false);
+
         listv = (ListView) root.findViewById(R.id.list);
         adapter = new ArrayAdapter<String>(MainActivity.myapp, android.R.layout.simple_list_item_1, listItems);
         listv.setAdapter(adapter);
 
-        for(int i = 0; i < MainActivity.devices.size(); i++){
-            addItems(listv, MainActivity.devices.get(i));
+        for(int i = 0; i < SaveManager.devices.size(); i++){
+            addItems(listv, SaveManager.devices.get(i));
         }
 
         final Button addDevice = root.findViewById(R.id.addDevice);
@@ -67,8 +69,9 @@ public class DevicesFragment extends Fragment {
                         Log.i("user input", " " + m_Text1);
                         Log.i("user input", " " + m_Text2);
                         Log.i("user input", " " + m_Text3);
-                        MainActivity.Device device = new MainActivity.Device(MainActivity.devices.size(), m_Text1, m_Text2, m_Text3, 150, 150, 500, 500, "true") ;
-                        MainActivity.devices.add(device);
+                        SaveManager.Device device = new SaveManager.Device(SaveManager.devices.size(), m_Text1, m_Text2, m_Text3, 150, 150, 500, 500, "false") ;
+                        SaveManager.devices.add(device);
+                        SaveManager.getInstance().SavePreferences(MainActivity.myapp);
                         addItems(listv, device);
                         //TODO: publish device to cloud database?
                     }
@@ -83,21 +86,21 @@ public class DevicesFragment extends Fragment {
             }
         });
 
-        final Button applyChanges = root.findViewById(R.id.applyChanges);
-        applyChanges.setOnClickListener(new View.OnClickListener() {
+        final Button deleteDevices = root.findViewById(R.id.deleteDevices);
+        deleteDevices.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Log.i("button", "apply changes pressed");
-                //TODO: alert dialog "this will reboot the Argon device - proceed cancel"?
+                Log.i("button", "delete devices pressed");
+                SaveManager.getInstance().ClearPreferences(MainActivity.myapp);
+                //TODO: alert dialog "this will delete every device"?
+                listItems.clear();
+                adapter.notifyDataSetChanged();
             }
         });
-
-
-
         return root;
     }
 
     //TODO: why pass View?
-    public void addItems(View v, MainActivity.Device device) {
+    public void addItems(View v, SaveManager.Device device) {
         listItems.add("Name: " + device.name + " Status: " + device.status);
         adapter.notifyDataSetChanged();
     }

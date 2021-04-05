@@ -1,6 +1,7 @@
 package com.example.smarthomecoursework.ui.home;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -20,9 +21,12 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.smarthomecoursework.MainActivity;
 import com.example.smarthomecoursework.R;
+import com.example.smarthomecoursework.SaveManager;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -36,6 +40,7 @@ import io.particle.android.sdk.cloud.exceptions.ParticleLoginException;
 import io.particle.android.sdk.utils.Async;
 import io.particle.android.sdk.utils.ui.Toaster;
 
+import static android.content.Context.MODE_PRIVATE;
 import static java.net.Proxy.Type.HTTP;
 
 public class HomeFragment extends Fragment {
@@ -53,22 +58,26 @@ public class HomeFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         root = inflater.inflate(R.layout.fragment_home, container, false);
         rootLayout = (ViewGroup) root.findViewById(R.id.view_root);
-        Log.i("device size", " " + MainActivity.devices.size());
-        for (int i = 0; i < MainActivity.devices.size(); i++)
+        Log.i("device size", " " + SaveManager.devices.size());
+        for (int i = 0; i < SaveManager.devices.size(); i++)
         {
-            DrawDevice(MainActivity.devices.get(i).id,MainActivity.devices.get(i).name,MainActivity.devices.get(i).width,MainActivity.devices.get(i).height,MainActivity.devices.get(i).leftMargin,MainActivity.devices.get(i).topMargin,MainActivity.devices.get(i).status);
+            DrawDevice(SaveManager.devices.get(i).id,
+                    SaveManager.devices.get(i).name,
+                    SaveManager.devices.get(i).width,
+                    SaveManager.devices.get(i).height,
+                    SaveManager.devices.get(i).leftMargin,
+                    SaveManager.devices.get(i).topMargin,
+                    SaveManager.devices.get(i).status
+            );
         }
         return root;
     }
 
-
     public void DrawDevice(int id, String name, int width, int height, int leftMargin, int topMargin, String status){
-        //move to class?
-        // Initialize a new ImageView widget
         ImageView iv = new ImageView(MainActivity.myapp);
         iv.setId(id);
-        // Set an image for ImageView
-        if(status == "true"){
+        Log.i("status", "" + status);
+        if(status.equals("true") ){
             iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_camera));
         } else{
             iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_gallery));
@@ -81,8 +90,6 @@ public class HomeFragment extends Fragment {
         iv.setLayoutParams(layoutParams);
         iv.setOnTouchListener(new ChoiceTouchListener());
         Log.d("button", "id: " + rootLayout);
-
-        //add the ImageView to layout
         rootLayout.addView(iv);
     }
 
@@ -100,36 +107,22 @@ public class HomeFragment extends Fragment {
                     break;
                 case MotionEvent.ACTION_UP:
                     if (!isDrag) {
-                        //TODO: move this separate method
+                        //TODO: move this separate method?
                         Log.d("image", "id: " + view.getId());
-                        Log.d("image", "name: " + MainActivity.devices.get(view.getId()).name);
-
+                        Log.d("image", "name: " + SaveManager.devices.get(view.getId()).name);
                         ImageView imgView = root.findViewById(view.getId());
                         //TODO: set image resource according to type AND status
-                        if(MainActivity.devices.get(view.getId()).status == "true"){
+                        if(SaveManager.devices.get(view.getId()).status.equals("true")){
                             imgView.setImageResource(R.drawable.ic_menu_gallery);
-                            MainActivity.devices.get(view.getId()).status = "false";
-//
-//                            if (runningTask != null)
-//                                runningTask.cancel(true);
-//                            runningTask = new LongOperation();
-//                            runningTask.execute();
-                            new LongOperation().execute(MainActivity.devices.get(view.getId()).id);
-
+                            SaveManager.devices.get(view.getId()).status = "false";
                         } else{
                             imgView.setImageResource(R.drawable.ic_menu_camera);
-                            MainActivity.devices.get(view.getId()).status = "true";
-
-//                            if (runningTask != null)
-//                                runningTask.cancel(true);
-//                            runningTask = new LongOperation();
-//                            runningTask.execute();
-                            new LongOperation().execute(MainActivity.devices.get(view.getId()).id);
-
+                            SaveManager.devices.get(view.getId()).status = "true";
                         }
-                        //TODO: publish status to cloud
+                        new LongOperation().execute(SaveManager.devices.get(view.getId()).id);
+                        SaveManager.getInstance().SavePreferences(MainActivity.myapp);
                     }
-                    isDrag = false; // reset the flag
+                    isDrag = false;
                     break;
                 case MotionEvent.ACTION_POINTER_DOWN:
                     break;
@@ -140,15 +133,12 @@ public class HomeFragment extends Fragment {
                     RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) view.getLayoutParams();
                     layoutParams.leftMargin = X - _xDelta;
                     layoutParams.topMargin = Y - _yDelta;
-
-                    MainActivity.devices.get(view.getId()).leftMargin = layoutParams.leftMargin;
-                    MainActivity.devices.get(view.getId()).topMargin = layoutParams.topMargin;
-
+                    SaveManager.devices.get(view.getId()).leftMargin = layoutParams.leftMargin;
+                    SaveManager.devices.get(view.getId()).topMargin = layoutParams.topMargin;
                     layoutParams.rightMargin = -250;
                     layoutParams.bottomMargin = -250;
                     view.setLayoutParams(layoutParams);
-
-                    //TODO: save device margins in Device class
+                    SaveManager.getInstance().SavePreferences(MainActivity.myapp);
                     break;
             }
             rootLayout.invalidate();
@@ -171,9 +161,9 @@ public class HomeFragment extends Fragment {
             }
             try {
                 List<String> someList = new ArrayList<String>();
-                someList.add(MainActivity.devices.get(params[0]).type);
-                someList.add(MainActivity.devices.get(params[0]).pin);
-                someList.add(MainActivity.devices.get(params[0]).status);
+                someList.add(SaveManager.devices.get(params[0]).type);
+                someList.add(SaveManager.devices.get(params[0]).pin);
+                someList.add(SaveManager.devices.get(params[0]).status);
                 particleDevice.callFunction("brew", someList);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
@@ -188,9 +178,7 @@ public class HomeFragment extends Fragment {
 
         @Override
         protected void onPostExecute(String result) {
-            // You might want to change "executed" for the returned string
-            // passed into onPostExecute(), but that is up to you
+            //...
         }
     }
-
 }

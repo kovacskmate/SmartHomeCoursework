@@ -1,12 +1,14 @@
 package com.example.smarthomecoursework;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 
+import com.example.smarthomecoursework.ui.home.HomeFragment;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
@@ -33,50 +35,23 @@ import io.particle.android.sdk.cloud.exceptions.ParticleLoginException;
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration mAppBarConfiguration;
+    ParticleDevice particleDevice;
 
     public static Context myapp;
 
-    public static List<Device> devices = new ArrayList<Device>();
-
     AsyncTask<Void, Void, String> runningTask;
 
-    public static class Device{
-        public int id;
-        public String name;
-        public String type;
-        public String pin;
-        public int width;
-        public int height;
-        public int leftMargin;
-        public int topMargin;
-
-        public Device(int id, String name, String type, String pin, int width, int height, int leftMargin, int topMargin, String status) {
-            this.id = id;
-            this.name = name;
-            this.type = type;
-            this.pin = pin;
-            this.width = width;
-            this.height = height;
-            this.leftMargin = leftMargin;
-            this.topMargin = topMargin;
-            this.status = status;
-        }
-
-        public String status;
-
-    }
+    SaveManager sm = SaveManager.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ParticleCloudSDK.init(MainActivity.this);
+        checkFirstRun();
         setContentView(R.layout.activity_main);
         MainActivity.myapp = getApplicationContext();
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        //TODO: populate list from cloud?
-        //devices.add(new Device(0, "first", "light","D7",350,350, 250, 250, true));
-        //devices.add(new Device(1, "second", "door","D3",350,350, 250, 650, true));
 
 //        FloatingActionButton fab = findViewById(R.id.fab);
 //        fab.setOnClickListener(new View.OnClickListener() {
@@ -118,7 +93,80 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         // Cancel running task(s) to avoid memory leaks
+        //TODO: running task not used?
         if (runningTask != null)
             runningTask.cancel(true);
+    }
+
+    //This code is from https://stackoverflow.com/questions/7217578/check-if-application-is-on-its-first-run by the users Squonk and Suragch
+    private void checkFirstRun() {
+        final String PREFS_NAME = "MyPrefsFile";
+        final String PREF_VERSION_CODE_KEY = "version_code";
+        final int DOESNT_EXIST = -1;
+
+        // Get current version code
+        int currentVersionCode = BuildConfig.VERSION_CODE;
+
+        // Get saved version code
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int savedVersionCode = prefs.getInt(PREF_VERSION_CODE_KEY, DOESNT_EXIST);
+
+        // Check for first run or upgrade
+        if (currentVersionCode == savedVersionCode) {
+            // This is just a normal run
+            sm.ReadPreferencesFile(getApplicationContext());
+            //TODO: sync device statuses with argon device
+            new LongOperation().execute();
+            //sm.SavePreferences(getApplicationContext());
+            return;
+
+        } else if (savedVersionCode == DOESNT_EXIST) {
+            //This is a new install (or the user cleared the shared preferences)
+            //sm.ReadPreferencesFile(getApplicationContext());
+            sm.SavePreferences(getApplicationContext());
+        } else if (currentVersionCode > savedVersionCode) {
+            //This is an upgrade, nothing to do here
+        }
+
+        // Update the shared preferences with the current version code
+        prefs.edit().putInt(PREF_VERSION_CODE_KEY, currentVersionCode).apply();
+    }
+
+    private final class LongOperation extends AsyncTask<Integer, Integer, String> {
+        @Override
+        protected String doInBackground(Integer... params) {
+            try {
+                ParticleCloudSDK.getCloud().logIn("asd@asd.com", "asd");
+            } catch (ParticleLoginException e) {
+                e.printStackTrace();
+            }
+            try {
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            }
+            try {
+                for (int i = 0; i < SaveManager.devices.size(); i++){
+                    List<String> someList = new ArrayList<String>();
+                    someList.add(SaveManager.devices.get(i).type);
+                    someList.add(SaveManager.devices.get(i).pin);
+                    someList.add(SaveManager.devices.get(i).status);
+                    particleDevice.callFunction("brew", someList);
+                }
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParticleDevice.FunctionDoesNotExistException e) {
+                e.printStackTrace();
+            }
+            Log.i("async", "finished");
+            return "Executed";
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            //...
+        }
     }
 }
