@@ -104,4 +104,6 @@ public class DevicesFragment extends Fragment {
         listItems.add("Name: " + device.name + " Status: " + device.status);
         adapter.notifyDataSetChanged();
     }
+
+
 }

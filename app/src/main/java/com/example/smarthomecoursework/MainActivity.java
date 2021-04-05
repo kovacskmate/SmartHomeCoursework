@@ -29,11 +29,15 @@ import java.util.List;
 import io.particle.android.sdk.cloud.ParticleCloud;
 import io.particle.android.sdk.cloud.ParticleCloudSDK;
 import io.particle.android.sdk.cloud.ParticleDevice;
+import io.particle.android.sdk.cloud.ParticleEvent;
+import io.particle.android.sdk.cloud.ParticleEventHandler;
 import io.particle.android.sdk.cloud.exceptions.ParticleCloudException;
 import io.particle.android.sdk.cloud.exceptions.ParticleLoginException;
+import io.particle.android.sdk.utils.Async;
 
 public class MainActivity extends AppCompatActivity {
 
+    //TODO: Most particle sdk calls only work if called on a background thread (Async methods).
     private AppBarConfiguration mAppBarConfiguration;
     ParticleDevice particleDevice;
 
@@ -119,7 +123,6 @@ public class MainActivity extends AppCompatActivity {
             new LongOperation().execute();
             //sm.SavePreferences(getApplicationContext());
             return;
-
         } else if (savedVersionCode == DOESNT_EXIST) {
             //This is a new install (or the user cleared the shared preferences)
             //sm.ReadPreferencesFile(getApplicationContext());
@@ -127,7 +130,6 @@ public class MainActivity extends AppCompatActivity {
         } else if (currentVersionCode > savedVersionCode) {
             //This is an upgrade, nothing to do here
         }
-
         // Update the shared preferences with the current version code
         prefs.edit().putInt(PREF_VERSION_CODE_KEY, currentVersionCode).apply();
     }
@@ -136,22 +138,24 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("asd@asd.com", "asd");
+                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "smartHomeCW12");
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
+
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
+
             try {
                 for (int i = 0; i < SaveManager.devices.size(); i++){
                     List<String> someList = new ArrayList<String>();
                     someList.add(SaveManager.devices.get(i).type);
                     someList.add(SaveManager.devices.get(i).pin);
                     someList.add(SaveManager.devices.get(i).status);
-                    particleDevice.callFunction("brew", someList);
+                    particleDevice.callFunction("recieveDevice", someList);
                 }
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
@@ -160,7 +164,53 @@ public class MainActivity extends AppCompatActivity {
             } catch (ParticleDevice.FunctionDoesNotExistException e) {
                 e.printStackTrace();
             }
-            Log.i("async", "finished");
+
+            try {
+                for (int i = 0; i < SaveManager.devices.size(); i++){
+                    List<String> someList = new ArrayList<String>();
+                    someList.add(SaveManager.devices.get(i).type);
+                    someList.add(SaveManager.devices.get(i).pin);
+                    someList.add(SaveManager.devices.get(i).status);
+                    particleDevice.callFunction("recieveCommand", someList);
+                }
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParticleDevice.FunctionDoesNotExistException e) {
+                e.printStackTrace();
+            }
+
+            Log.i("async", "login finished");
+            new SubscribeToTemp().execute();
+            return "Executed";
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            //...
+        }
+    }
+
+    private final class SubscribeToTemp extends AsyncTask<Integer, Integer, String> {
+        @Override
+        protected String doInBackground(Integer... params) {
+            long subscriptionId;  // save this for later, for unsubscribing
+            try {
+                subscriptionId = ParticleCloudSDK.getCloud().subscribeToMyDevicesEvents(
+                        null,  // the first argument, "eventNamePrefix", is optional
+                        new ParticleEventHandler() {
+                            public void onEvent(String eventName, ParticleEvent event) {
+                                Log.i("some tag", "Received event with payload: " + event.getDataPayload());
+                            }
+                            public void onEventError(Exception e) {
+                                Log.e("some tag", "Event error: ", e);
+                            }
+                        });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            Log.i("async", "sub to temp finished");
             return "Executed";
         }
 

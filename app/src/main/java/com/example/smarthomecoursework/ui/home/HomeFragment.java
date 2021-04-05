@@ -150,12 +150,12 @@ public class HomeFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("asd@asd.com", "asd");
+                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "smartHomeCW12");
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
@@ -164,7 +164,7 @@ public class HomeFragment extends Fragment {
                 someList.add(SaveManager.devices.get(params[0]).type);
                 someList.add(SaveManager.devices.get(params[0]).pin);
                 someList.add(SaveManager.devices.get(params[0]).status);
-                particleDevice.callFunction("brew", someList);
+                particleDevice.callFunction("recieveCommand", someList);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             } catch (IOException e) {
