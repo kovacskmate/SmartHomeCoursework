@@ -23,6 +23,8 @@ import com.example.smarthomecoursework.MainActivity;
 import com.example.smarthomecoursework.R;
 import com.example.smarthomecoursework.SaveManager;
 
+import org.w3c.dom.Text;
+
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -35,6 +37,8 @@ import java.util.List;
 
 import io.particle.android.sdk.cloud.ParticleCloudSDK;
 import io.particle.android.sdk.cloud.ParticleDevice;
+import io.particle.android.sdk.cloud.ParticleEvent;
+import io.particle.android.sdk.cloud.ParticleEventHandler;
 import io.particle.android.sdk.cloud.exceptions.ParticleCloudException;
 import io.particle.android.sdk.cloud.exceptions.ParticleLoginException;
 import io.particle.android.sdk.utils.Async;
@@ -56,9 +60,14 @@ public class HomeFragment extends Fragment {
     String status = "false";
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        new ParticleLogin().execute();
+
         root = inflater.inflate(R.layout.fragment_home, container, false);
         rootLayout = (ViewGroup) root.findViewById(R.id.view_root);
         Log.i("device size", " " + SaveManager.devices.size());
+
+
+
         for (int i = 0; i < SaveManager.devices.size(); i++)
         {
             DrawDevice(SaveManager.devices.get(i).id,
@@ -89,8 +98,23 @@ public class HomeFragment extends Fragment {
         layoutParams.bottomMargin = -250;
         iv.setLayoutParams(layoutParams);
         iv.setOnTouchListener(new ChoiceTouchListener());
-        Log.d("button", "id: " + rootLayout);
+
+        Log.i("button", "iv id: " + iv.getId());
+
+        TextView tv = new TextView(MainActivity.myapp);
+        tv.setText("test");
+        tv.setTag(name);
+        RelativeLayout.LayoutParams layoutParamsTv = new RelativeLayout.LayoutParams(width, height);
+        layoutParamsTv.leftMargin = leftMargin;
+        layoutParamsTv.topMargin = topMargin - 100;
+        layoutParamsTv.rightMargin = -250;
+        layoutParamsTv.bottomMargin = -250;
+        tv.setLayoutParams(layoutParamsTv);
+
+        Log.d("button", "tv id: " + tv.getId());
         rootLayout.addView(iv);
+
+        rootLayout.addView(tv);
     }
 
     private final class ChoiceTouchListener implements View.OnTouchListener {
@@ -110,6 +134,7 @@ public class HomeFragment extends Fragment {
                         //TODO: move this separate method?
                         Log.d("image", "id: " + view.getId());
                         Log.d("image", "name: " + SaveManager.devices.get(view.getId()).name);
+                        Log.d("image", "name: " + SaveManager.devices.get(view.getId()).pin);
                         ImageView imgView = root.findViewById(view.getId());
                         //TODO: set image resource according to type AND status
                         if(SaveManager.devices.get(view.getId()).status.equals("true")){
@@ -138,6 +163,17 @@ public class HomeFragment extends Fragment {
                     layoutParams.rightMargin = -250;
                     layoutParams.bottomMargin = -250;
                     view.setLayoutParams(layoutParams);
+
+                    Log.i("button", "" + view.getId() * 999);
+
+                    RelativeLayout.LayoutParams layoutParamsTv = new RelativeLayout.LayoutParams(100, 100);
+                    layoutParamsTv.leftMargin = layoutParams.leftMargin;
+                    layoutParamsTv.topMargin = layoutParams.topMargin - 100;
+                    layoutParamsTv.rightMargin = -250;
+                    layoutParamsTv.bottomMargin = -250;
+
+                    root.findViewWithTag(SaveManager.devices.get(view.getId()).name).setLayoutParams(layoutParamsTv);
+
                     SaveManager.getInstance().SavePreferences(MainActivity.myapp);
                     break;
             }
@@ -146,7 +182,7 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    private final class LongOperation extends AsyncTask<Integer, Integer, String> {
+    private final class ParticleLogin extends AsyncTask<Integer, Integer, String> {
         @Override
         protected String doInBackground(Integer... params) {
             try {
@@ -154,11 +190,26 @@ public class HomeFragment extends Fragment {
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
+
             try {
                 particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
+            Log.i("async", "login finished");
+            new SubscribeToTemp().execute();
+            return "Executed";
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            //...
+        }
+    }
+
+    private final class LongOperation extends AsyncTask<Integer, Integer, String> {
+        @Override
+        protected String doInBackground(Integer... params) {
             try {
                 List<String> someList = new ArrayList<String>();
                 someList.add(SaveManager.devices.get(params[0]).type);
@@ -181,4 +232,43 @@ public class HomeFragment extends Fragment {
             //...
         }
     }
+
+    private final class SubscribeToTemp extends AsyncTask<Integer, Integer, String> {
+        @Override
+        protected String doInBackground(Integer... params) {
+            long subscriptionId;  // save this for later, for unsubscribing
+            try {
+                subscriptionId = ParticleCloudSDK.getCloud().subscribeToMyDevicesEvents(
+                        null,  // the first argument, "eventNamePrefix", is optional
+                        new ParticleEventHandler() {
+                            public void onEvent(String eventName, ParticleEvent event) {
+                                if(eventName.contains("tempSensor")){
+                                    String deviceId = eventName.substring(10, eventName.length());
+                                    Log.i("temperature device id: ", "" + deviceId);
+                                    for(int i = 0; i < SaveManager.devices.size(); i++){
+                                        if(SaveManager.devices.get(i).pin.equals(deviceId)){
+                                            TextView tv = root.findViewWithTag(SaveManager.devices.get(i).name);
+                                            tv.setText(event.getDataPayload());
+                                        }
+                                    }
+                                }
+                                Log.i("some tag", "Received event with payload: " + event.getDataPayload());
+                            }
+                            public void onEventError(Exception e) {
+                                Log.e("some tag", "Event error: ", e);
+                            }
+                        });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            Log.i("async", "sub to temp finished");
+            return "Executed";
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            //...
+        }
+    }
+
 }

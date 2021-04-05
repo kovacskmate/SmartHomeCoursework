@@ -2,6 +2,7 @@ package com.example.smarthomecoursework.ui.devices;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,12 +23,22 @@ import com.example.smarthomecoursework.MainActivity;
 import com.example.smarthomecoursework.R;
 import com.example.smarthomecoursework.SaveManager;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+
+import io.particle.android.sdk.cloud.ParticleCloudSDK;
+import io.particle.android.sdk.cloud.ParticleDevice;
+import io.particle.android.sdk.cloud.ParticleEvent;
+import io.particle.android.sdk.cloud.ParticleEventHandler;
+import io.particle.android.sdk.cloud.exceptions.ParticleCloudException;
+import io.particle.android.sdk.cloud.exceptions.ParticleLoginException;
 
 public class DevicesFragment extends Fragment {
     ArrayAdapter<String> adapter;
     ArrayList<String> listItems=new ArrayList<String>();
     ListView listv;
+    ParticleDevice particleDevice;
 
     //TODO: rename these
     private String m_Text1 = "";
@@ -72,6 +83,7 @@ public class DevicesFragment extends Fragment {
                         SaveManager.Device device = new SaveManager.Device(SaveManager.devices.size(), m_Text1, m_Text2, m_Text3, 150, 150, 500, 500, "false") ;
                         SaveManager.devices.add(device);
                         SaveManager.getInstance().SavePreferences(MainActivity.myapp);
+                        new DevicesFragment.SendDeviceToCLoud().execute(SaveManager.devices.size());
                         addItems(listv, device);
                         //TODO: publish device to cloud database?
                     }
@@ -105,5 +117,41 @@ public class DevicesFragment extends Fragment {
         adapter.notifyDataSetChanged();
     }
 
+    private final class SendDeviceToCLoud extends AsyncTask<Integer, Integer, String> {
+        @Override
+        protected String doInBackground(Integer... params) {
+            try {
+                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "smartHomeCW12");
+            } catch (ParticleLoginException e) {
+                e.printStackTrace();
+            }
 
+            try {
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                List<String> someList = new ArrayList<String>();
+                someList.add(SaveManager.devices.get(params[0]-1).type);
+                someList.add(SaveManager.devices.get(params[0]-1).pin);
+                someList.add(SaveManager.devices.get(params[0]-1).status);
+                particleDevice.callFunction("recieveDevice", someList);
+
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParticleDevice.FunctionDoesNotExistException e) {
+                e.printStackTrace();
+            }
+            return "Executed";
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            //...
+        }
+    }
 }

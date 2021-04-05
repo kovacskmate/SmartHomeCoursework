@@ -182,35 +182,6 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Log.i("async", "login finished");
-            new SubscribeToTemp().execute();
-            return "Executed";
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            //...
-        }
-    }
-
-    private final class SubscribeToTemp extends AsyncTask<Integer, Integer, String> {
-        @Override
-        protected String doInBackground(Integer... params) {
-            long subscriptionId;  // save this for later, for unsubscribing
-            try {
-                subscriptionId = ParticleCloudSDK.getCloud().subscribeToMyDevicesEvents(
-                        null,  // the first argument, "eventNamePrefix", is optional
-                        new ParticleEventHandler() {
-                            public void onEvent(String eventName, ParticleEvent event) {
-                                Log.i("some tag", "Received event with payload: " + event.getDataPayload());
-                            }
-                            public void onEventError(Exception e) {
-                                Log.e("some tag", "Event error: ", e);
-                            }
-                        });
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            Log.i("async", "sub to temp finished");
             return "Executed";
         }
 
