@@ -132,13 +132,13 @@ public class DevicesFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "homeSmartCW21");
+                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
 
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
@@ -170,12 +170,12 @@ public class DevicesFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "homeSmartCW21");
+                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
