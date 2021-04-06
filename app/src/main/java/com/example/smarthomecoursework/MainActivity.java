@@ -82,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
+        //getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
@@ -138,13 +138,13 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "smartHomeCW12");
+                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
 
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }

@@ -13,4 +13,11 @@
     <string name="button_addDevice">Create new device</string>
     <string name="button_deleteDevices">Delete devices</string>
     <string name="hint_device">Device hint</string>
+
+    <string-array name="device_types_array">
+        <item>Light</item>
+        <item>Temperature sensor</item>
+        <item>Door</item>
+        <item>Range finder</item>
+    </string-array>
 </resources>

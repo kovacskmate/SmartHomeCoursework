@@ -12,12 +12,10 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.Spinner;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProvider;
 
 import com.example.smarthomecoursework.MainActivity;
 import com.example.smarthomecoursework.R;
@@ -29,8 +27,6 @@ import java.util.List;
 
 import io.particle.android.sdk.cloud.ParticleCloudSDK;
 import io.particle.android.sdk.cloud.ParticleDevice;
-import io.particle.android.sdk.cloud.ParticleEvent;
-import io.particle.android.sdk.cloud.ParticleEventHandler;
 import io.particle.android.sdk.cloud.exceptions.ParticleCloudException;
 import io.particle.android.sdk.cloud.exceptions.ParticleLoginException;
 
@@ -41,13 +37,12 @@ public class DevicesFragment extends Fragment {
     ParticleDevice particleDevice;
 
     //TODO: rename these
-    private String m_Text1 = "";
-    private String m_Text2 = "";
-    private String m_Text3 = "";
+    private String deviceName = "";
+    private String deviceType = "";
+    private String devicePin = "";
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_devices, container, false);
-
         listv = (ListView) root.findViewById(R.id.list);
         adapter = new ArrayAdapter<String>(MainActivity.myapp, android.R.layout.simple_list_item_1, listItems);
         listv.setAdapter(adapter);
@@ -61,31 +56,37 @@ public class DevicesFragment extends Fragment {
             public void onClick(View v) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
                 LayoutInflater inflater = getActivity().getLayoutInflater();
-                builder.setTitle("Create new device");
+                //builder.setTitle("Create new device");
                 View builderView = inflater.inflate(R.layout.device_dialog, null);
 
                 final EditText deviceName = (EditText)builderView.findViewById(R.id.device_name);
-                final EditText deviceType = (EditText)builderView.findViewById(R.id.device_type);
+                //final EditText deviceType = (EditText)builderView.findViewById(R.id.device_type);
                 final EditText devicePin = (EditText)builderView.findViewById(R.id.device_pin);
 
                 builder.setView(builderView);
+
+                Spinner spinner = (Spinner) builderView.findViewById(R.id.mySpinner);
+                ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(MainActivity.myapp, R.array.device_types_array, android.R.layout.simple_spinner_item);
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinner.setAdapter(adapter);
 
                 builder.setPositiveButton("Create", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         //EditText mEdit = (EditText)findViewById(R.id.device_name);
-                        m_Text1 = deviceName.getText().toString();
-                        m_Text2 = deviceType.getText().toString();
-                        m_Text3 = devicePin.getText().toString();
-                        Log.i("user input", " " + m_Text1);
-                        Log.i("user input", " " + m_Text2);
-                        Log.i("user input", " " + m_Text3);
-                        SaveManager.Device device = new SaveManager.Device(SaveManager.devices.size(), m_Text1, m_Text2, m_Text3, 150, 150, 500, 500, "false") ;
+                        DevicesFragment.this.deviceName = deviceName.getText().toString();
+                        DevicesFragment.this.deviceType = spinner.getSelectedItem().toString();
+                        DevicesFragment.this.devicePin = devicePin.getText().toString();
+
+                        Log.i("user input", " " + DevicesFragment.this.deviceName);
+                        Log.i("user input", " " + DevicesFragment.this.deviceType);
+                        Log.i("user input", " " + DevicesFragment.this.devicePin);
+
+                        SaveManager.Device device = new SaveManager.Device(SaveManager.devices.size(), DevicesFragment.this.deviceName, DevicesFragment.this.deviceType, DevicesFragment.this.devicePin, 150, 150, 500, 500, "false") ;
                         SaveManager.devices.add(device);
                         SaveManager.getInstance().SavePreferences(MainActivity.myapp);
                         new DevicesFragment.SendDeviceToCLoud().execute(SaveManager.devices.size());
                         addItems(listv, device);
-                        //TODO: publish device to cloud database?
                     }
                 });
                 builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -104,16 +105,26 @@ public class DevicesFragment extends Fragment {
                 Log.i("button", "delete devices pressed");
                 SaveManager.getInstance().ClearPreferences(MainActivity.myapp);
                 //TODO: alert dialog "this will delete every device"?
+                new DeleteDevicesOnArgon().execute();
                 listItems.clear();
                 adapter.notifyDataSetChanged();
             }
         });
+
+        final Button syncDevices = root.findViewById(R.id.syncDevices);
+        syncDevices.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Log.i("button", "sync devices pressed");
+                new SyncDevicesToArgon().execute();
+            }
+        });
+
         return root;
     }
 
     //TODO: why pass View?
     public void addItems(View v, SaveManager.Device device) {
-        listItems.add("Name: " + device.name + " Status: " + device.status);
+        listItems.add(device.name + " - " + device.type + " - PIN" + device.pin);
         adapter.notifyDataSetChanged();
     }
 
@@ -121,7 +132,7 @@ public class DevicesFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "smartHomeCW12");
+                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "homeSmartCW21");
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
@@ -149,6 +160,91 @@ public class DevicesFragment extends Fragment {
             return "Executed";
         }
 
+        @Override
+        protected void onPostExecute(String result) {
+            //...
+        }
+    }
+
+    private final class SyncDevicesToArgon extends AsyncTask<Integer, Integer, String> {
+        @Override
+        protected String doInBackground(Integer... params) {
+            try {
+                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "homeSmartCW21");
+            } catch (ParticleLoginException e) {
+                e.printStackTrace();
+            }
+            try {
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            }
+            try {
+                for (int i = 0; i < SaveManager.devices.size(); i++){
+                    List<String> someList = new ArrayList<String>();
+                    someList.add(SaveManager.devices.get(i).type);
+                    someList.add(SaveManager.devices.get(i).pin);
+                    someList.add(SaveManager.devices.get(i).status);
+                    particleDevice.callFunction("recieveDevice", someList);
+                }
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParticleDevice.FunctionDoesNotExistException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                for (int i = 0; i < SaveManager.devices.size(); i++){
+                    List<String> someList = new ArrayList<String>();
+                    someList.add(SaveManager.devices.get(i).type);
+                    someList.add(SaveManager.devices.get(i).pin);
+                    someList.add(SaveManager.devices.get(i).status);
+                    particleDevice.callFunction("recieveCommand", someList);
+                }
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParticleDevice.FunctionDoesNotExistException e) {
+                e.printStackTrace();
+            }
+            Log.i("async", "login finished");
+            return "Executed";
+        }
+        @Override
+        protected void onPostExecute(String result) {
+            //...
+        }
+    }
+
+    private final class DeleteDevicesOnArgon extends AsyncTask<Integer, Integer, String> {
+        @Override
+        protected String doInBackground(Integer... params) {
+            try {
+                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
+            } catch (ParticleLoginException e) {
+                e.printStackTrace();
+            }
+            try {
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            }
+            try {
+                List<String> someList = new ArrayList<String>();
+                particleDevice.callFunction("recieveDeleteDevices", someList);
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParticleDevice.FunctionDoesNotExistException e) {
+                e.printStackTrace();
+            }
+            Log.i("async", "login finished");
+            return "Executed";
+        }
         @Override
         protected void onPostExecute(String result) {
             //...

@@ -14,7 +14,7 @@
             android:title="Devices" />
         <item
             android:id="@+id/nav_slideshow"
-            android:icon="@drawable/ic_menu_slideshow"
-            android:title="Placeholder" />
+            android:icon="@drawable/ic_settings"
+            android:title="Settings" />
     </group>
 </menu>

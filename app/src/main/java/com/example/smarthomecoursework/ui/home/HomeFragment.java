@@ -2,9 +2,12 @@ package com.example.smarthomecoursework.ui.home;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -22,6 +25,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.smarthomecoursework.MainActivity;
 import com.example.smarthomecoursework.R;
 import com.example.smarthomecoursework.SaveManager;
+import com.google.android.material.snackbar.Snackbar;
 
 import org.w3c.dom.Text;
 
@@ -33,7 +37,9 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.particle.android.sdk.cloud.ParticleCloudSDK;
 import io.particle.android.sdk.cloud.ParticleDevice;
@@ -56,6 +62,8 @@ public class HomeFragment extends Fragment {
     private int _yDelta;
     ParticleDevice particleDevice;
 
+    boolean firstSub = true;
+
     AsyncTask<Void, Void, String> runningTask;
     String status = "false";
 
@@ -66,8 +74,6 @@ public class HomeFragment extends Fragment {
         rootLayout = (ViewGroup) root.findViewById(R.id.view_root);
         Log.i("device size", " " + SaveManager.devices.size());
 
-
-
         for (int i = 0; i < SaveManager.devices.size(); i++)
         {
             DrawDevice(SaveManager.devices.get(i).id,
@@ -76,20 +82,41 @@ public class HomeFragment extends Fragment {
                     SaveManager.devices.get(i).height,
                     SaveManager.devices.get(i).leftMargin,
                     SaveManager.devices.get(i).topMargin,
-                    SaveManager.devices.get(i).status
+                    SaveManager.devices.get(i).status,
+                    SaveManager.devices.get(i).type
             );
         }
         return root;
     }
 
-    public void DrawDevice(int id, String name, int width, int height, int leftMargin, int topMargin, String status){
+    public void DrawDevice(int id, String name, int width, int height, int leftMargin, int topMargin, String status, String type){
         ImageView iv = new ImageView(MainActivity.myapp);
         iv.setId(id);
         Log.i("status", "" + status);
         if(status.equals("true") ){
-            iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_camera));
+            if(type.equals("Light")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_lamp_on));
+            } else if (type.equals("Door")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_door_open));
+            } else if (type.equals("Temperature sensor")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_temperature));
+            } else if (type.equals("Range finder")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_rangefinder));
+            } else{
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_camera));
+            }
         } else{
-            iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_gallery));
+            if(type.equals("Light")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_lamp_off));
+            } else if (type.equals("Door")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_door_locked));
+            } else if (type.equals("Temperature sensor")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_temperature));
+            } else if (type.equals("Range finder")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_rangefinder));
+            } else{
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_gallery));
+            }
         }
         RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(width, height);
         layoutParams.leftMargin = leftMargin;
@@ -102,18 +129,20 @@ public class HomeFragment extends Fragment {
         Log.i("button", "iv id: " + iv.getId());
 
         TextView tv = new TextView(MainActivity.myapp);
-        tv.setText("test");
+        tv.setText(name);
         tv.setTag(name);
-        RelativeLayout.LayoutParams layoutParamsTv = new RelativeLayout.LayoutParams(width, height);
+        tv.setTypeface(null, Typeface.BOLD);
+        tv.setTextColor(Color.parseColor("#FF3700B3"));
+        tv.setGravity(Gravity.CENTER_VERTICAL | Gravity.TOP);
+
+        RelativeLayout.LayoutParams layoutParamsTv = new RelativeLayout.LayoutParams(350, 350);
         layoutParamsTv.leftMargin = leftMargin;
-        layoutParamsTv.topMargin = topMargin - 100;
+        layoutParamsTv.topMargin = topMargin - 60;
         layoutParamsTv.rightMargin = -250;
         layoutParamsTv.bottomMargin = -250;
         tv.setLayoutParams(layoutParamsTv);
-
         Log.d("button", "tv id: " + tv.getId());
         rootLayout.addView(iv);
-
         rootLayout.addView(tv);
     }
 
@@ -137,14 +166,28 @@ public class HomeFragment extends Fragment {
                         Log.d("image", "name: " + SaveManager.devices.get(view.getId()).pin);
                         ImageView imgView = root.findViewById(view.getId());
                         //TODO: set image resource according to type AND status
-                        if(SaveManager.devices.get(view.getId()).status.equals("true")){
-                            imgView.setImageResource(R.drawable.ic_menu_gallery);
-                            SaveManager.devices.get(view.getId()).status = "false";
-                        } else{
-                            imgView.setImageResource(R.drawable.ic_menu_camera);
-                            SaveManager.devices.get(view.getId()).status = "true";
+                        if(SaveManager.devices.get(view.getId()).type.equals("Light") || SaveManager.devices.get(view.getId()).type.equals("Door")){
+                            if(SaveManager.devices.get(view.getId()).status.equals("true")){
+                                if(SaveManager.devices.get(view.getId()).type.equals("Light")){
+                                    imgView.setImageResource(R.drawable.ic_lamp_off);
+                                } else if (SaveManager.devices.get(view.getId()).type.equals("Door")){
+                                    imgView.setImageResource(R.drawable.ic_door_locked);
+                                } else{
+                                    imgView.setImageResource(R.drawable.ic_menu_gallery);
+                                }
+                                SaveManager.devices.get(view.getId()).status = "false";
+                            } else{
+                                if(SaveManager.devices.get(view.getId()).type.equals("Light")){
+                                    imgView.setImageResource(R.drawable.ic_lamp_on);
+                                } else if (SaveManager.devices.get(view.getId()).type.equals("Door")){
+                                    imgView.setImageResource(R.drawable.ic_door_open);
+                                } else{
+                                    imgView.setImageResource(R.drawable.ic_menu_camera);
+                                }
+                                SaveManager.devices.get(view.getId()).status = "true";
+                            }
+                            new LongOperation().execute(SaveManager.devices.get(view.getId()).id);
                         }
-                        new LongOperation().execute(SaveManager.devices.get(view.getId()).id);
                         SaveManager.getInstance().SavePreferences(MainActivity.myapp);
                     }
                     isDrag = false;
@@ -164,11 +207,9 @@ public class HomeFragment extends Fragment {
                     layoutParams.bottomMargin = -250;
                     view.setLayoutParams(layoutParams);
 
-                    Log.i("button", "" + view.getId() * 999);
-
-                    RelativeLayout.LayoutParams layoutParamsTv = new RelativeLayout.LayoutParams(100, 100);
+                    RelativeLayout.LayoutParams layoutParamsTv = new RelativeLayout.LayoutParams(350, 350);
                     layoutParamsTv.leftMargin = layoutParams.leftMargin;
-                    layoutParamsTv.topMargin = layoutParams.topMargin - 100;
+                    layoutParamsTv.topMargin = layoutParams.topMargin - 60;
                     layoutParamsTv.rightMargin = -250;
                     layoutParamsTv.bottomMargin = -250;
 
@@ -186,18 +227,21 @@ public class HomeFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("kovacskmate@gmail.com", "smartHomeCW12");
+                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
 
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("e00fce688b18465fa09104e9");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
             Log.i("async", "login finished");
-            new SubscribeToTemp().execute();
+            if(firstSub){
+                new SubscribeToTemp().execute();
+                firstSub = false;
+            }
             return "Executed";
         }
 
@@ -233,6 +277,8 @@ public class HomeFragment extends Fragment {
         }
     }
 
+    private Map<Integer, Integer> rangeFinderReadings = new HashMap<Integer, Integer>();
+
     private final class SubscribeToTemp extends AsyncTask<Integer, Integer, String> {
         @Override
         protected String doInBackground(Integer... params) {
@@ -244,15 +290,41 @@ public class HomeFragment extends Fragment {
                             public void onEvent(String eventName, ParticleEvent event) {
                                 if(eventName.contains("tempSensor")){
                                     String deviceId = eventName.substring(10, eventName.length());
-                                    Log.i("temperature device id: ", "" + deviceId);
                                     for(int i = 0; i < SaveManager.devices.size(); i++){
                                         if(SaveManager.devices.get(i).pin.equals(deviceId)){
                                             TextView tv = root.findViewWithTag(SaveManager.devices.get(i).name);
-                                            tv.setText(event.getDataPayload());
+                                            if(tv != null){
+                                                tv.setText(SaveManager.devices.get(i).name + ": " + Math.round(Double.parseDouble(event.getDataPayload())) + " C");
+                                            }
                                         }
                                     }
                                 }
-                                Log.i("some tag", "Received event with payload: " + event.getDataPayload());
+                                if(eventName.contains("rangeFinder")){
+                                    String deviceId = eventName.substring(11, eventName.length());
+                                    //Log.i("range device id: ", "" + deviceId);
+                                    for(int i = 0; i < SaveManager.devices.size(); i++){
+                                        if(SaveManager.devices.get(i).pin.equals(deviceId)){
+                                            TextView tv = root.findViewWithTag(SaveManager.devices.get(i).name);
+                                            if(tv != null){
+                                                tv.setText(SaveManager.devices.get(i).name + ": " + Math.round(Double.parseDouble(event.getDataPayload())) + " In");
+                                                if(!rangeFinderReadings.containsKey(SaveManager.devices.get(i).id)){
+                                                    rangeFinderReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
+                                                } else{
+                                                    int difference = Math.abs(rangeFinderReadings.get(SaveManager.devices.get(i).id)) - (int)Double.parseDouble(event.getDataPayload());
+                                                    if(Math.abs(difference) > 4){
+                                                        Log.i("range" + SaveManager.devices.get(i).id, "diff > 4");
+                                                        String notification = SaveManager.devices.get(i).name + " detected movement!";
+                                                        Snackbar.make(root, notification, Snackbar.LENGTH_LONG).show();
+                                                        rangeFinderReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
+                                                    } else{
+                                                        rangeFinderReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                Log.i("some tag", "Received event with payload: " +  event.getDataPayload());
                             }
                             public void onEventError(Exception e) {
                                 Log.e("some tag", "Event error: ", e);
@@ -261,7 +333,7 @@ public class HomeFragment extends Fragment {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            Log.i("async", "sub to temp finished");
+            Log.i("async", "sub to events finished");
             return "Executed";
         }
 

@@ -29,6 +29,7 @@ android {
 }
 
 dependencies {
+    implementation 'com.takisoft.fix:preference-v7:25.3.0.0'
     implementation 'io.particle:cloudsdk:1.0.1'
     implementation 'io.particle:devicesetup:0.7.3'
     implementation 'androidx.appcompat:appcompat:1.2.0'
