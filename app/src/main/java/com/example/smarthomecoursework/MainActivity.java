@@ -2,17 +2,20 @@ package com.example.smarthomecoursework;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
+import android.widget.TextView;
 
 import com.example.smarthomecoursework.ui.home.HomeFragment;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
 
+import androidx.core.app.ActivityCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -35,6 +38,14 @@ import io.particle.android.sdk.cloud.exceptions.ParticleCloudException;
 import io.particle.android.sdk.cloud.exceptions.ParticleLoginException;
 import io.particle.android.sdk.utils.Async;
 
+import static android.Manifest.permission.ACCESS_BACKGROUND_LOCATION;
+import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.INTERNET;
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+import static android.content.Intent.ACTION_OPEN_DOCUMENT;
+
 public class MainActivity extends AppCompatActivity {
 
     //TODO: Most particle sdk calls only work if called on a background thread (Async methods).
@@ -50,6 +61,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (ActivityCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, ACTION_OPEN_DOCUMENT ) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, INTERNET,},1 );
+        }
+
         ParticleCloudSDK.init(MainActivity.this);
         checkFirstRun();
         setContentView(R.layout.activity_main);
@@ -119,6 +134,9 @@ public class MainActivity extends AppCompatActivity {
         if (currentVersionCode == savedVersionCode) {
             // This is just a normal run
             sm.ReadPreferencesFile(getApplicationContext());
+            sm.ReadFloorplan(getApplicationContext());
+            sm.ReadRangeInterval(getApplicationContext());
+            sm.ReadTempInterval(getApplicationContext());
             //TODO: sync device statuses with argon device
             new LongOperation().execute();
             //sm.SavePreferences(getApplicationContext());
@@ -127,6 +145,8 @@ public class MainActivity extends AppCompatActivity {
             //This is a new install (or the user cleared the shared preferences)
             //sm.ReadPreferencesFile(getApplicationContext());
             sm.SavePreferences(getApplicationContext());
+            sm.SaveRangeInterval(getApplicationContext(), 500);
+            sm.SaveTempInterval(getApplicationContext(), 3000);
         } else if (currentVersionCode > savedVersionCode) {
             //This is an upgrade, nothing to do here
         }
@@ -173,6 +193,19 @@ public class MainActivity extends AppCompatActivity {
                     someList.add(SaveManager.devices.get(i).status);
                     particleDevice.callFunction("recieveCommand", someList);
                 }
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParticleDevice.FunctionDoesNotExistException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                List<String> someList = new ArrayList<String>();
+                someList.add(Integer.toString(SaveManager.tempInterval));
+                someList.add(Integer.toString(SaveManager.rangeInterval));
+                particleDevice.callFunction("recieveSetInterval", someList);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             } catch (IOException e) {

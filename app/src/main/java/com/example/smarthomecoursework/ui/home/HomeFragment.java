@@ -2,10 +2,15 @@ package com.example.smarthomecoursework.ui.home;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -30,8 +35,10 @@ import com.google.android.material.snackbar.Snackbar;
 import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URLConnection;
@@ -62,18 +69,16 @@ public class HomeFragment extends Fragment {
     private int _yDelta;
     ParticleDevice particleDevice;
 
-    boolean firstSub = true;
-
-    AsyncTask<Void, Void, String> runningTask;
-    String status = "false";
-
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         new ParticleLogin().execute();
-
         root = inflater.inflate(R.layout.fragment_home, container, false);
         rootLayout = (ViewGroup) root.findViewById(R.id.view_root);
-        Log.i("device size", " " + SaveManager.devices.size());
-
+        if(SaveManager.floorPlan != null){
+            byte[] decodedString = Base64.decode(SaveManager.floorPlan, Base64.DEFAULT);
+            Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+            Drawable dr = new BitmapDrawable(decodedByte);
+            rootLayout.setBackground(dr);
+        }
         for (int i = 0; i < SaveManager.devices.size(); i++)
         {
             DrawDevice(SaveManager.devices.get(i).id,
@@ -92,7 +97,6 @@ public class HomeFragment extends Fragment {
     public void DrawDevice(int id, String name, int width, int height, int leftMargin, int topMargin, String status, String type){
         ImageView iv = new ImageView(MainActivity.myapp);
         iv.setId(id);
-        Log.i("status", "" + status);
         if(status.equals("true") ){
             if(type.equals("Light")){
                 iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_lamp_on));
@@ -126,8 +130,6 @@ public class HomeFragment extends Fragment {
         iv.setLayoutParams(layoutParams);
         iv.setOnTouchListener(new ChoiceTouchListener());
 
-        Log.i("button", "iv id: " + iv.getId());
-
         TextView tv = new TextView(MainActivity.myapp);
         tv.setText(name);
         tv.setTag(name);
@@ -141,7 +143,6 @@ public class HomeFragment extends Fragment {
         layoutParamsTv.rightMargin = -250;
         layoutParamsTv.bottomMargin = -250;
         tv.setLayoutParams(layoutParamsTv);
-        Log.d("button", "tv id: " + tv.getId());
         rootLayout.addView(iv);
         rootLayout.addView(tv);
     }
@@ -160,12 +161,7 @@ public class HomeFragment extends Fragment {
                     break;
                 case MotionEvent.ACTION_UP:
                     if (!isDrag) {
-                        //TODO: move this separate method?
-                        Log.d("image", "id: " + view.getId());
-                        Log.d("image", "name: " + SaveManager.devices.get(view.getId()).name);
-                        Log.d("image", "name: " + SaveManager.devices.get(view.getId()).pin);
                         ImageView imgView = root.findViewById(view.getId());
-                        //TODO: set image resource according to type AND status
                         if(SaveManager.devices.get(view.getId()).type.equals("Light") || SaveManager.devices.get(view.getId()).type.equals("Door")){
                             if(SaveManager.devices.get(view.getId()).status.equals("true")){
                                 if(SaveManager.devices.get(view.getId()).type.equals("Light")){
@@ -238,10 +234,11 @@ public class HomeFragment extends Fragment {
                 e.printStackTrace();
             }
             Log.i("async", "login finished");
-            if(firstSub){
-                new SubscribeToTemp().execute();
-                firstSub = false;
-            }
+
+            new SubscribeToTemp().execute();
+
+
+
             return "Executed";
         }
 
@@ -282,7 +279,13 @@ public class HomeFragment extends Fragment {
     private final class SubscribeToTemp extends AsyncTask<Integer, Integer, String> {
         @Override
         protected String doInBackground(Integer... params) {
-            long subscriptionId;  // save this for later, for unsubscribing
+            try {
+                particleDevice.unsubscribeFromEvents(SaveManager.subId);
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            }
+
+            long subscriptionId = 0;  // save this for later, for unsubscribing
             try {
                 subscriptionId = ParticleCloudSDK.getCloud().subscribeToMyDevicesEvents(
                         null,  // the first argument, "eventNamePrefix", is optional
@@ -305,16 +308,19 @@ public class HomeFragment extends Fragment {
                                     for(int i = 0; i < SaveManager.devices.size(); i++){
                                         if(SaveManager.devices.get(i).pin.equals(deviceId)){
                                             TextView tv = root.findViewWithTag(SaveManager.devices.get(i).name);
-                                            if(tv != null){
+                                            if(tv != null && root != null){
                                                 tv.setText(SaveManager.devices.get(i).name + ": " + Math.round(Double.parseDouble(event.getDataPayload())) + " In");
                                                 if(!rangeFinderReadings.containsKey(SaveManager.devices.get(i).id)){
                                                     rangeFinderReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
                                                 } else{
                                                     int difference = Math.abs(rangeFinderReadings.get(SaveManager.devices.get(i).id)) - (int)Double.parseDouble(event.getDataPayload());
                                                     if(Math.abs(difference) > 4){
-                                                        Log.i("range" + SaveManager.devices.get(i).id, "diff > 4");
                                                         String notification = SaveManager.devices.get(i).name + " detected movement!";
-                                                        Snackbar.make(root, notification, Snackbar.LENGTH_LONG).show();
+                                                        try{
+                                                            Snackbar.make(root, notification, Snackbar.LENGTH_LONG).show();
+                                                        } catch (Exception e){
+
+                                                        }
                                                         rangeFinderReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
                                                     } else{
                                                         rangeFinderReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
@@ -334,6 +340,7 @@ public class HomeFragment extends Fragment {
                 e.printStackTrace();
             }
             Log.i("async", "sub to events finished");
+            SaveManager.subId = subscriptionId;
             return "Executed";
         }
 

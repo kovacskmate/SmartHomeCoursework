@@ -1,11 +1,18 @@
 package com.example.smarthomecoursework;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.drawable.Drawable;
+import android.net.Uri;
+import android.util.Log;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +25,14 @@ public class SaveManager {
     private static SaveManager Instace = null;
 
     public static List<Device> devices = new ArrayList<Device>();
+
+    public static String floorPlan;
+
+    public static int tempInterval = 3000;
+
+    public static int rangeInterval = 500;
+
+    public static long subId;
 
     public static class Device{
         public int id;
@@ -121,6 +136,58 @@ public class SaveManager {
             e.printStackTrace();
         }
         SavePreferences(MainActivity.myapp);
+    }
 
+    public void SaveFloorplan(Context ctx, String base64){
+        final String PREFS_NAME = "MyPrefsFile";
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        //prefs.edit().putBoolean("showStats", value).apply();
+        Log.i("SaveFloorplan", "saving" + base64);
+        prefs.edit().putString("floorPlan", base64).apply();
+        floorPlan = base64;
+    }
+
+    public void ReadFloorplan(Context ctx){
+        SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
+        Log.i("floorPlan", prefs.getString("floorPlan", "stuff"));
+        try{
+            floorPlan = prefs.getString("floorPlan", null);
+        }catch (Exception e){
+
+        }
+    }
+
+    public void SaveTempInterval(Context ctx, int interval){
+        final String PREFS_NAME = "MyPrefsFile";
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putInt("tempInterval", interval).apply();
+        //prefs.edit().putString("floorPlan", base64).apply();
+        tempInterval = interval;
+    }
+
+    public void ReadTempInterval(Context ctx){
+        SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
+        try{
+            tempInterval = prefs.getInt("tempInterval", 500);
+        }catch (Exception e){
+
+        }
+    }
+
+    public void SaveRangeInterval(Context ctx, int interval){
+        final String PREFS_NAME = "MyPrefsFile";
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putInt("rangeInterval", interval).apply();
+        //prefs.edit().putString("floorPlan", base64).apply();
+        rangeInterval = interval;
+    }
+
+    public void ReadRangeInterval(Context ctx){
+        SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
+        try{
+            rangeInterval = prefs.getInt("rangeInterval", 500);
+        }catch (Exception e){
+
+        }
     }
 }

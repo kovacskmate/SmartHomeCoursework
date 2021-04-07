@@ -78,10 +78,6 @@ public class DevicesFragment extends Fragment {
                         DevicesFragment.this.deviceType = spinner.getSelectedItem().toString();
                         DevicesFragment.this.devicePin = devicePin.getText().toString();
 
-                        Log.i("user input", " " + DevicesFragment.this.deviceName);
-                        Log.i("user input", " " + DevicesFragment.this.deviceType);
-                        Log.i("user input", " " + DevicesFragment.this.devicePin);
-
                         SaveManager.Device device = new SaveManager.Device(SaveManager.devices.size(), DevicesFragment.this.deviceName, DevicesFragment.this.deviceType, DevicesFragment.this.devicePin, 150, 150, 500, 500, "false") ;
                         SaveManager.devices.add(device);
                         SaveManager.getInstance().SavePreferences(MainActivity.myapp);
@@ -203,6 +199,18 @@ public class DevicesFragment extends Fragment {
                     someList.add(SaveManager.devices.get(i).status);
                     particleDevice.callFunction("recieveCommand", someList);
                 }
+            } catch (ParticleCloudException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParticleDevice.FunctionDoesNotExistException e) {
+                e.printStackTrace();
+            }
+            try {
+                List<String> someList = new ArrayList<String>();
+                someList.add(Integer.toString(SaveManager.tempInterval));
+                someList.add(Integer.toString(SaveManager.rangeInterval));
+                particleDevice.callFunction("recieveSetInterval", someList);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             } catch (IOException e) {
