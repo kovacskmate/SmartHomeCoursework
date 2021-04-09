@@ -1,9 +1,12 @@
 package com.example.smarthomecoursework;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -67,19 +70,11 @@ public class MainActivity extends AppCompatActivity {
 
         ParticleCloudSDK.init(MainActivity.this);
         checkFirstRun();
+        createNotificationChannel();
         setContentView(R.layout.activity_main);
         MainActivity.myapp = getApplicationContext();
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-//        FloatingActionButton fab = findViewById(R.id.fab);
-//        fab.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-//                        .setAction("Action", null).show();
-//            }
-//        });
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         NavigationView navigationView = findViewById(R.id.nav_view);
@@ -137,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
             sm.ReadFloorplan(getApplicationContext());
             sm.ReadRangeInterval(getApplicationContext());
             sm.ReadTempInterval(getApplicationContext());
+            sm.ReadLightInterval(getApplicationContext());
             //TODO: sync device statuses with argon device
             new LongOperation().execute();
             //sm.SavePreferences(getApplicationContext());
@@ -147,6 +143,8 @@ public class MainActivity extends AppCompatActivity {
             sm.SavePreferences(getApplicationContext());
             sm.SaveRangeInterval(getApplicationContext(), 500);
             sm.SaveTempInterval(getApplicationContext(), 3000);
+            sm.SaveLightInterval(getApplicationContext(), 3000);
+            new LongOperation().execute();
         } else if (currentVersionCode > savedVersionCode) {
             //This is an upgrade, nothing to do here
         }
@@ -205,6 +203,7 @@ public class MainActivity extends AppCompatActivity {
                 List<String> someList = new ArrayList<String>();
                 someList.add(Integer.toString(SaveManager.tempInterval));
                 someList.add(Integer.toString(SaveManager.rangeInterval));
+                someList.add(Integer.toString(SaveManager.lightInterval));
                 particleDevice.callFunction("recieveSetInterval", someList);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
@@ -221,6 +220,20 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String result) {
             //...
+        }
+    }
+
+    private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "MyChannel";
+            String description = "My description";
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel channel = new NotificationChannel("23", name, importance);
+            channel.setDescription(description);
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
         }
     }
 }

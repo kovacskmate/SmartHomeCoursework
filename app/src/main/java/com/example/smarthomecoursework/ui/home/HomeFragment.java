@@ -1,7 +1,12 @@
 package com.example.smarthomecoursework.ui.home;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -21,8 +26,11 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
@@ -106,7 +114,9 @@ public class HomeFragment extends Fragment {
                 iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_temperature));
             } else if (type.equals("Range finder")){
                 iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_rangefinder));
-            } else{
+            } else if (type.equals("Light sensor")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_light_sensor));
+            }else{
                 iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_camera));
             }
         } else{
@@ -118,6 +128,8 @@ public class HomeFragment extends Fragment {
                 iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_temperature));
             } else if (type.equals("Range finder")){
                 iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_rangefinder));
+            } else if (type.equals("Light sensor")){
+                iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_light_sensor));
             } else{
                 iv.setImageDrawable(MainActivity.myapp.getDrawable(R.drawable.ic_menu_gallery));
             }
@@ -234,11 +246,7 @@ public class HomeFragment extends Fragment {
                 e.printStackTrace();
             }
             Log.i("async", "login finished");
-
             new SubscribeToTemp().execute();
-
-
-
             return "Executed";
         }
 
@@ -317,7 +325,13 @@ public class HomeFragment extends Fragment {
                                                     if(Math.abs(difference) > 4){
                                                         String notification = SaveManager.devices.get(i).name + " detected movement!";
                                                         try{
-                                                            Snackbar.make(root, notification, Snackbar.LENGTH_LONG).show();
+                                                            NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.myapp, "23")
+                                                                    .setSmallIcon(R.drawable.ic_rangefinder)
+                                                                    .setContentTitle("Movement detected!")
+                                                                    .setContentText(notification)
+                                                                    .setPriority(NotificationCompat.PRIORITY_MAX);
+                                                            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(MainActivity.myapp);
+                                                            notificationManager.notify(5, builder.build());
                                                         } catch (Exception e){
 
                                                         }
@@ -325,6 +339,23 @@ public class HomeFragment extends Fragment {
                                                     } else{
                                                         rangeFinderReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
                                                     }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if(eventName.contains("lightSensor")){
+                                    String deviceId = eventName.substring(11, eventName.length());
+                                    for(int i = 0; i < SaveManager.devices.size(); i++){
+                                        if(SaveManager.devices.get(i).pin.equals(deviceId)){
+                                            TextView tv = root.findViewWithTag(SaveManager.devices.get(i).name);
+                                            if(tv != null){
+                                                if(Double.parseDouble(event.getDataPayload()) < 500){
+                                                    tv.setText(SaveManager.devices.get(i).name + ": dark");
+                                                } else if(Double.parseDouble(event.getDataPayload()) < 1500){
+                                                    tv.setText(SaveManager.devices.get(i).name + ": dim");
+                                                } else{
+                                                    tv.setText(SaveManager.devices.get(i).name + ": bright");
                                                 }
                                             }
                                         }

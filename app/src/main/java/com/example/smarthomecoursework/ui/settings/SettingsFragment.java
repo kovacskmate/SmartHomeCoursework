@@ -53,6 +53,7 @@ public class SettingsFragment extends Fragment {
 
     private EditText range_interval;
     private EditText temp_interval;
+    private EditText light_interval;
     private Button settings_browse;
     private Button settings_save;
     private String floorPlanBase64 = "";
@@ -64,7 +65,6 @@ public class SettingsFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_settings, container, false);
 
         range_interval = (EditText) root.findViewById(R.id.range_interval);
-        Log.i("rangeFinder", Integer.toString(SaveManager.rangeInterval));
         range_interval.setText(Integer.toString(SaveManager.rangeInterval));
         range_interval.addTextChangedListener(new TextWatcher() {
             public void afterTextChanged(Editable s) {
@@ -79,6 +79,16 @@ public class SettingsFragment extends Fragment {
         temp_interval.addTextChangedListener(new TextWatcher() {
             public void afterTextChanged(Editable s) {
                 Log.i("temp interval changed", " " + temp_interval.getText());
+            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+        });
+
+        light_interval = (EditText) root.findViewById(R.id.light_interval);
+        light_interval.setText(Integer.toString(SaveManager.lightInterval));
+        light_interval.addTextChangedListener(new TextWatcher() {
+            public void afterTextChanged(Editable s) {
+                Log.i("temp interval changed", " " + light_interval.getText());
             }
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -105,6 +115,9 @@ public class SettingsFragment extends Fragment {
                 }
                 if(!range_interval.getText().toString().equals("")){
                     SaveManager.getInstance().SaveRangeInterval(MainActivity.myapp, Integer.parseInt(range_interval.getText().toString()));
+                }
+                if(!light_interval.getText().toString().equals("")){
+                    SaveManager.getInstance().SaveLightInterval(MainActivity.myapp, Integer.parseInt(light_interval.getText().toString()));
                 }
                 //TODO: login to particle then send intervals
                 new SetIntervalsOnArgon().execute();
@@ -155,6 +168,7 @@ public class SettingsFragment extends Fragment {
                 List<String> someList = new ArrayList<String>();
                 someList.add(Integer.toString(SaveManager.tempInterval));
                 someList.add(Integer.toString(SaveManager.rangeInterval));
+                someList.add(Integer.toString(SaveManager.lightInterval));
                 particleDevice.callFunction("recieveSetInterval", someList);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();

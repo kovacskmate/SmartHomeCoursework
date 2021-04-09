@@ -32,6 +32,8 @@ public class SaveManager {
 
     public static int rangeInterval = 500;
 
+    public static int lightInterval = 3000;
+
     public static long subId;
 
     public static class Device{
@@ -178,7 +180,6 @@ public class SaveManager {
         final String PREFS_NAME = "MyPrefsFile";
         SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         prefs.edit().putInt("rangeInterval", interval).apply();
-        //prefs.edit().putString("floorPlan", base64).apply();
         rangeInterval = interval;
     }
 
@@ -186,6 +187,22 @@ public class SaveManager {
         SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
         try{
             rangeInterval = prefs.getInt("rangeInterval", 500);
+        }catch (Exception e){
+
+        }
+    }
+
+    public void SaveLightInterval(Context ctx, int interval){
+        final String PREFS_NAME = "MyPrefsFile";
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putInt("lightInterval", interval).apply();
+        lightInterval = interval;
+    }
+
+    public void ReadLightInterval(Context ctx){
+        SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
+        try{
+            lightInterval = prefs.getInt("lightInterval", 500);
         }catch (Exception e){
 
         }

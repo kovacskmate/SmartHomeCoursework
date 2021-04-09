@@ -19,5 +19,6 @@
         <item>Temperature sensor</item>
         <item>Door</item>
         <item>Range finder</item>
+        <item>Light sensor</item>
     </string-array>
 </resources>

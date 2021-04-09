@@ -210,6 +210,7 @@ public class DevicesFragment extends Fragment {
                 List<String> someList = new ArrayList<String>();
                 someList.add(Integer.toString(SaveManager.tempInterval));
                 someList.add(Integer.toString(SaveManager.rangeInterval));
+                someList.add(Integer.toString(SaveManager.lightInterval));
                 particleDevice.callFunction("recieveSetInterval", someList);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
