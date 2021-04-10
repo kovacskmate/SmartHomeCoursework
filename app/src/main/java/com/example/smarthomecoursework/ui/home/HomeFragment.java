@@ -235,13 +235,13 @@ public class HomeFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
+                ParticleCloudSDK.getCloud().logIn(SaveManager.email, SaveManager.passw);
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
 
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice(SaveManager.devid);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
@@ -264,6 +264,8 @@ public class HomeFragment extends Fragment {
                 someList.add(SaveManager.devices.get(params[0]).type);
                 someList.add(SaveManager.devices.get(params[0]).pin);
                 someList.add(SaveManager.devices.get(params[0]).status);
+                someList.add(SaveManager.devices.get(params[0]).attachedLED);
+                someList.add(SaveManager.devices.get(params[0]).triggerPin);
                 particleDevice.callFunction("recieveCommand", someList);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
@@ -283,6 +285,8 @@ public class HomeFragment extends Fragment {
     }
 
     private Map<Integer, Integer> rangeFinderReadings = new HashMap<Integer, Integer>();
+    private Map<Integer, Integer> tempSensorReadings = new HashMap<Integer, Integer>();
+    private Map<Integer, String> lightSensorReadings = new HashMap<Integer, String>();
 
     private final class SubscribeToTemp extends AsyncTask<Integer, Integer, String> {
         @Override
@@ -306,6 +310,23 @@ public class HomeFragment extends Fragment {
                                             TextView tv = root.findViewWithTag(SaveManager.devices.get(i).name);
                                             if(tv != null){
                                                 tv.setText(SaveManager.devices.get(i).name + ": " + Math.round(Double.parseDouble(event.getDataPayload())) + " C");
+                                                if(!tempSensorReadings.containsKey(SaveManager.devices.get(i).id)){
+                                                    tempSensorReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
+                                                } else{
+                                                    if((int)Double.parseDouble(event.getDataPayload()) < 20 && SaveManager.tempNoti && tempSensorReadings.get(SaveManager.devices.get(i).id) > 20){
+                                                       String notification =  "Temperature at " + SaveManager.devices.get(i).name + " dropped below 20 C!";
+                                                        NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.myapp, "23")
+                                                                .setSmallIcon(R.drawable.ic_temperature)
+                                                                .setContentTitle("Temperature dropped!")
+                                                                .setContentText(notification)
+                                                                .setPriority(NotificationCompat.PRIORITY_MAX);
+                                                        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(MainActivity.myapp);
+                                                        notificationManager.notify(4, builder.build());
+                                                        tempSensorReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
+                                                    } else{
+                                                        tempSensorReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -322,7 +343,7 @@ public class HomeFragment extends Fragment {
                                                     rangeFinderReadings.put(SaveManager.devices.get(i).id, (int)Math.round(Double.parseDouble(event.getDataPayload())));
                                                 } else{
                                                     int difference = Math.abs(rangeFinderReadings.get(SaveManager.devices.get(i).id)) - (int)Double.parseDouble(event.getDataPayload());
-                                                    if(Math.abs(difference) > 4){
+                                                    if(Math.abs(difference) > 4 && SaveManager.rangeNoti){
                                                         String notification = SaveManager.devices.get(i).name + " detected movement!";
                                                         try{
                                                             NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.myapp, "23")
@@ -350,18 +371,69 @@ public class HomeFragment extends Fragment {
                                         if(SaveManager.devices.get(i).pin.equals(deviceId)){
                                             TextView tv = root.findViewWithTag(SaveManager.devices.get(i).name);
                                             if(tv != null){
+                                                String brightness = "";
                                                 if(Double.parseDouble(event.getDataPayload()) < 500){
-                                                    tv.setText(SaveManager.devices.get(i).name + ": dark");
+                                                    brightness = ": dark";
                                                 } else if(Double.parseDouble(event.getDataPayload()) < 1500){
-                                                    tv.setText(SaveManager.devices.get(i).name + ": dim");
+                                                    brightness = ": dim";
                                                 } else{
-                                                    tv.setText(SaveManager.devices.get(i).name + ": bright");
+                                                    brightness = ": bright";
+                                                }
+                                                tv.setText(SaveManager.devices.get(i).name + brightness);
+                                                if(!lightSensorReadings.containsKey(SaveManager.devices.get(i).id)){
+                                                    lightSensorReadings.put(SaveManager.devices.get(i).id, brightness);
+                                                } else{
+                                                    if(!lightSensorReadings.get(SaveManager.devices.get(i).id).equals(brightness) && SaveManager.lightNoti){
+                                                        NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.myapp, "23")
+                                                                .setSmallIcon(R.drawable.ic_light_sensor)
+                                                                .setContentTitle("Brightness changed!")
+                                                                .setContentText(SaveManager.devices.get(i).name + brightness)
+                                                                .setPriority(NotificationCompat.PRIORITY_MAX);
+                                                        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(MainActivity.myapp);
+                                                        notificationManager.notify(6, builder.build());
+
+                                                        Log.i("brightness", "" + brightness);
+
+                                                        if(!SaveManager.devices.get(i).attachedLED.equals("-") && SaveManager.automateLights){
+                                                            if(brightness.equals(": bright")){
+                                                                //turn light on
+                                                                Log.i("in brightness if", "yep");
+                                                                int id = -1;
+                                                                for (int k = 0; k < SaveManager.devices.size(); k++){
+                                                                    if(SaveManager.devices.get(k).pin.equals(SaveManager.devices.get(i).attachedLED)){
+                                                                        id = SaveManager.devices.get(k).id;
+                                                                    }
+                                                                }
+                                                                SaveManager.devices.get(id).status = "true";
+                                                                ImageView imgView = root.findViewById(id);
+                                                                imgView.setImageResource(R.drawable.ic_lamp_on);
+                                                                new LongOperation().execute(id);
+                                                            }
+
+                                                            if(brightness.equals(": dark")){
+                                                                //turn light off
+                                                                int id = -1;
+                                                                for (int k = 0; k < SaveManager.devices.size(); k++){
+                                                                    if(SaveManager.devices.get(k).pin.equals(SaveManager.devices.get(i).attachedLED)){
+                                                                        id = SaveManager.devices.get(k).id;
+                                                                    }
+                                                                }
+                                                                SaveManager.devices.get(id).status = "false";
+                                                                ImageView imgView = root.findViewById(id);
+                                                                imgView.setImageResource(R.drawable.ic_lamp_off);
+                                                                new LongOperation().execute(id);
+                                                            }
+                                                        }
+                                                        lightSensorReadings.put(SaveManager.devices.get(i).id, brightness);
+                                                    } else{
+                                                        lightSensorReadings.put(SaveManager.devices.get(i).id, brightness);
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                Log.i("some tag", "Received event with payload: " +  event.getDataPayload());
+                                //Log.i("some tag", "Received event with payload: " +  event.getDataPayload());
                             }
                             public void onEventError(Exception e) {
                                 Log.e("some tag", "Event error: ", e);

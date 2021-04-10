@@ -133,6 +133,10 @@ public class MainActivity extends AppCompatActivity {
             sm.ReadRangeInterval(getApplicationContext());
             sm.ReadTempInterval(getApplicationContext());
             sm.ReadLightInterval(getApplicationContext());
+            sm.ReadLightNoti(getApplicationContext());
+            sm.ReadRangeNoti(getApplicationContext());
+            sm.ReadTempNoti(getApplicationContext());
+            sm.ReadAutomateLights(getApplicationContext());
             //TODO: sync device statuses with argon device
             new LongOperation().execute();
             //sm.SavePreferences(getApplicationContext());
@@ -144,6 +148,10 @@ public class MainActivity extends AppCompatActivity {
             sm.SaveRangeInterval(getApplicationContext(), 500);
             sm.SaveTempInterval(getApplicationContext(), 3000);
             sm.SaveLightInterval(getApplicationContext(), 3000);
+            sm.SaveTempNoti(getApplicationContext(), true);
+            sm.SaveRangeNoti(getApplicationContext(), true);
+            sm.SaveLightNoti(getApplicationContext(), true);
+            sm.SaveAutomateLights(getApplicationContext(), true);
             new LongOperation().execute();
         } else if (currentVersionCode > savedVersionCode) {
             //This is an upgrade, nothing to do here
@@ -156,13 +164,13 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
+                ParticleCloudSDK.getCloud().logIn(SaveManager.email, SaveManager.passw);
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
 
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice(SaveManager.devid);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
@@ -173,6 +181,8 @@ public class MainActivity extends AppCompatActivity {
                     someList.add(SaveManager.devices.get(i).type);
                     someList.add(SaveManager.devices.get(i).pin);
                     someList.add(SaveManager.devices.get(i).status);
+                    someList.add(SaveManager.devices.get(i).attachedLED);
+                    someList.add(SaveManager.devices.get(i).triggerPin);
                     particleDevice.callFunction("recieveDevice", someList);
                 }
             } catch (ParticleCloudException e) {
@@ -189,6 +199,8 @@ public class MainActivity extends AppCompatActivity {
                     someList.add(SaveManager.devices.get(i).type);
                     someList.add(SaveManager.devices.get(i).pin);
                     someList.add(SaveManager.devices.get(i).status);
+                    someList.add(SaveManager.devices.get(i).attachedLED);
+                    someList.add(SaveManager.devices.get(i).triggerPin);
                     particleDevice.callFunction("recieveCommand", someList);
                 }
             } catch (ParticleCloudException e) {

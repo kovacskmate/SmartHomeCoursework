@@ -4,15 +4,18 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
+import android.widget.TableRow;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -40,6 +43,8 @@ public class DevicesFragment extends Fragment {
     private String deviceName = "";
     private String deviceType = "";
     private String devicePin = "";
+    private String attachedLed = "";
+    private String triggerPin = "";
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_devices, container, false);
@@ -56,12 +61,16 @@ public class DevicesFragment extends Fragment {
             public void onClick(View v) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
                 LayoutInflater inflater = getActivity().getLayoutInflater();
-                //builder.setTitle("Create new device");
-                View builderView = inflater.inflate(R.layout.device_dialog, null);
+                View builderView = inflater.inflate(R.layout.device_dialog_scroll, null);
 
                 final EditText deviceName = (EditText)builderView.findViewById(R.id.device_name);
-                //final EditText deviceType = (EditText)builderView.findViewById(R.id.device_type);
                 final EditText devicePin = (EditText)builderView.findViewById(R.id.device_pin);
+                final EditText attachedLed = (EditText)builderView.findViewById(R.id.attached_led);
+                attachedLed.setEnabled(false);
+                attachedLed.setInputType(InputType.TYPE_NULL);
+                final EditText triggerPin = (EditText)builderView.findViewById(R.id.trigger_pin);
+                triggerPin.setEnabled(false);
+                triggerPin.setInputType(InputType.TYPE_NULL);
 
                 builder.setView(builderView);
 
@@ -70,15 +79,47 @@ public class DevicesFragment extends Fragment {
                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 spinner.setAdapter(adapter);
 
+                spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                        if(spinner.getSelectedItem().toString().equals("Light sensor")){
+                            Log.i("item changed", "" + spinner.getSelectedItem());
+                            attachedLed.setEnabled(true);
+                            attachedLed.setInputType(InputType.TYPE_CLASS_NUMBER);
+                            triggerPin.setEnabled(false);
+                            triggerPin.setInputType(InputType.TYPE_NULL);
+                        }
+                        if(spinner.getSelectedItem().toString().equals("Range finder")){
+                            triggerPin.setEnabled(true);
+                            triggerPin.setInputType(InputType.TYPE_CLASS_NUMBER);
+                            attachedLed.setEnabled(false);
+                            attachedLed.setInputType(InputType.TYPE_NULL);
+                        }
+                    }
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parentView) {
+
+                    }
+                });
+
                 builder.setPositiveButton("Create", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        //EditText mEdit = (EditText)findViewById(R.id.device_name);
                         DevicesFragment.this.deviceName = deviceName.getText().toString();
                         DevicesFragment.this.deviceType = spinner.getSelectedItem().toString();
                         DevicesFragment.this.devicePin = devicePin.getText().toString();
+                        DevicesFragment.this.attachedLed = attachedLed.getText().toString();
+                        DevicesFragment.this.triggerPin = triggerPin.getText().toString();
 
-                        SaveManager.Device device = new SaveManager.Device(SaveManager.devices.size(), DevicesFragment.this.deviceName, DevicesFragment.this.deviceType, DevicesFragment.this.devicePin, 150, 150, 500, 500, "false") ;
+                        if (DevicesFragment.this.attachedLed.equals("")){
+                            DevicesFragment.this.attachedLed = "-";
+                        }
+                        if (DevicesFragment.this.triggerPin.equals("")){
+                            DevicesFragment.this.triggerPin = "-";
+                        }
+
+                        SaveManager.Device device = new SaveManager.Device(SaveManager.devices.size(), DevicesFragment.this.deviceName, DevicesFragment.this.deviceType, DevicesFragment.this.devicePin, 150, 150, 500, 500, "false", DevicesFragment.this.attachedLed, DevicesFragment.this.triggerPin) ;
+                        Log.i("new device", "" + device.toString());
                         SaveManager.devices.add(device);
                         SaveManager.getInstance().SavePreferences(MainActivity.myapp);
                         new DevicesFragment.SendDeviceToCLoud().execute(SaveManager.devices.size());
@@ -118,9 +159,14 @@ public class DevicesFragment extends Fragment {
         return root;
     }
 
-    //TODO: why pass View?
     public void addItems(View v, SaveManager.Device device) {
-        listItems.add(device.name + " - " + device.type + " - PIN" + device.pin);
+        if(device.type.equals("Light sensor")){
+            listItems.add(device.name + " - " + device.type + " - PIN" + device.pin + " Attached light: " + device.attachedLED);
+        } else if(device.type.equals("Range finder")){
+            listItems.add(device.name + " - " + device.type + " - PIN" + device.pin + " Trigger pin: " + device.triggerPin);
+        } else{
+            listItems.add(device.name + " - " + device.type + " - PIN" + device.pin);
+        }
         adapter.notifyDataSetChanged();
     }
 
@@ -128,13 +174,13 @@ public class DevicesFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
+                ParticleCloudSDK.getCloud().logIn(SaveManager.email, SaveManager.passw);
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
 
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice(SaveManager.devid);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
@@ -144,6 +190,8 @@ public class DevicesFragment extends Fragment {
                 someList.add(SaveManager.devices.get(params[0]-1).type);
                 someList.add(SaveManager.devices.get(params[0]-1).pin);
                 someList.add(SaveManager.devices.get(params[0]-1).status);
+                someList.add(SaveManager.devices.get(params[0]-1).attachedLED);
+                someList.add(SaveManager.devices.get(params[0]-1).triggerPin);
                 particleDevice.callFunction("recieveDevice", someList);
 
             } catch (ParticleCloudException e) {
@@ -166,12 +214,12 @@ public class DevicesFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
+                ParticleCloudSDK.getCloud().logIn(SaveManager.email, SaveManager.passw);
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice(SaveManager.devid);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }
@@ -181,6 +229,8 @@ public class DevicesFragment extends Fragment {
                     someList.add(SaveManager.devices.get(i).type);
                     someList.add(SaveManager.devices.get(i).pin);
                     someList.add(SaveManager.devices.get(i).status);
+                    someList.add(SaveManager.devices.get(i).attachedLED);
+                    someList.add(SaveManager.devices.get(i).triggerPin);
                     particleDevice.callFunction("recieveDevice", someList);
                 }
             } catch (ParticleCloudException e) {
@@ -232,12 +282,12 @@ public class DevicesFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
+                ParticleCloudSDK.getCloud().logIn(SaveManager.email, SaveManager.passw);
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice(SaveManager.devid);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }

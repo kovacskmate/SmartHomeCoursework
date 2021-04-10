@@ -24,8 +24,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.Switch;
+import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -54,6 +57,10 @@ public class SettingsFragment extends Fragment {
     private EditText range_interval;
     private EditText temp_interval;
     private EditText light_interval;
+    private Switch lightToggle;
+    private Switch tempToggle;
+    private Switch rangeToggle;
+    private Switch automateLights;
     private Button settings_browse;
     private Button settings_save;
     private String floorPlanBase64 = "";
@@ -68,7 +75,7 @@ public class SettingsFragment extends Fragment {
         range_interval.setText(Integer.toString(SaveManager.rangeInterval));
         range_interval.addTextChangedListener(new TextWatcher() {
             public void afterTextChanged(Editable s) {
-                Log.i("range interval changed", " " + range_interval.getText());
+                //Log.i("range interval changed", " " + range_interval.getText());
             }
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -78,7 +85,7 @@ public class SettingsFragment extends Fragment {
         temp_interval.setText(Integer.toString(SaveManager.tempInterval));
         temp_interval.addTextChangedListener(new TextWatcher() {
             public void afterTextChanged(Editable s) {
-                Log.i("temp interval changed", " " + temp_interval.getText());
+               //Log.i("temp interval changed", " " + temp_interval.getText());
             }
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -88,10 +95,58 @@ public class SettingsFragment extends Fragment {
         light_interval.setText(Integer.toString(SaveManager.lightInterval));
         light_interval.addTextChangedListener(new TextWatcher() {
             public void afterTextChanged(Editable s) {
-                Log.i("temp interval changed", " " + light_interval.getText());
+                //Log.i("temp interval changed", " " + light_interval.getText());
             }
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
+        });
+
+        lightToggle = (Switch) root.findViewById(R.id.bright_noti_toggle);
+        lightToggle.setChecked(SaveManager.lightNoti);
+        lightToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    SaveManager.lightNoti = isChecked;
+                } else {
+                    SaveManager.lightNoti = isChecked;
+                }
+            }
+        });
+
+        tempToggle = (Switch) root.findViewById(R.id.temp_noti_toggle);
+        tempToggle.setChecked(SaveManager.tempNoti);
+        tempToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    SaveManager.tempNoti = isChecked;
+                } else {
+                    SaveManager.tempNoti = isChecked;
+                }
+            }
+        });
+
+        rangeToggle = (Switch) root.findViewById(R.id.range_noti_toggle);
+        rangeToggle.setChecked(SaveManager.rangeNoti);
+        rangeToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    SaveManager.rangeNoti = isChecked;
+                } else {
+                    SaveManager.rangeNoti = isChecked;
+                }
+            }
+        });
+
+        automateLights = (Switch) root.findViewById(R.id.automate_lights_toggle);
+        automateLights.setChecked(SaveManager.automateLights);
+        automateLights.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    SaveManager.automateLights = isChecked;
+                } else {
+                    SaveManager.automateLights = isChecked;
+                }
+            }
         });
 
         settings_browse = (Button) root.findViewById(R.id.settings_browse);
@@ -119,7 +174,10 @@ public class SettingsFragment extends Fragment {
                 if(!light_interval.getText().toString().equals("")){
                     SaveManager.getInstance().SaveLightInterval(MainActivity.myapp, Integer.parseInt(light_interval.getText().toString()));
                 }
-                //TODO: login to particle then send intervals
+                SaveManager.getInstance().SaveLightNoti(MainActivity.myapp, lightToggle.isChecked());
+                SaveManager.getInstance().SaveTempNoti(MainActivity.myapp, tempToggle.isChecked());
+                SaveManager.getInstance().SaveRangeNoti(MainActivity.myapp, rangeToggle.isChecked());
+                SaveManager.getInstance().SaveAutomateLights(MainActivity.myapp, automateLights.isChecked());
                 new SetIntervalsOnArgon().execute();
             }
         });
@@ -155,12 +213,12 @@ public class SettingsFragment extends Fragment {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                ParticleCloudSDK.getCloud().logIn("asd@gmail.com", "asd");
+                ParticleCloudSDK.getCloud().logIn(SaveManager.email, SaveManager.passw);
             } catch (ParticleLoginException e) {
                 e.printStackTrace();
             }
             try {
-                particleDevice = ParticleCloudSDK.getCloud().getDevice("asd");
+                particleDevice = ParticleCloudSDK.getCloud().getDevice(SaveManager.devid);
             } catch (ParticleCloudException e) {
                 e.printStackTrace();
             }

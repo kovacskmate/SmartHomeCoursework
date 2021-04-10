@@ -29,12 +29,19 @@ public class SaveManager {
     public static String floorPlan;
 
     public static int tempInterval = 3000;
-
     public static int rangeInterval = 500;
-
     public static int lightInterval = 3000;
 
+    public static boolean tempNoti = false;
+    public static boolean rangeNoti = false;
+    public static boolean lightNoti = false;
+    public static boolean automateLights = false;
+
     public static long subId;
+
+    public static String email = "asd@gmail.com";
+    public static String passw = "asd";
+    public static String devid = "asd";
 
     public static class Device{
         public int id;
@@ -46,8 +53,10 @@ public class SaveManager {
         public int leftMargin;
         public int topMargin;
         public String status;
+        public String attachedLED;
+        public String triggerPin;
 
-        public Device(int id, String name, String type, String pin, int width, int height, int leftMargin, int topMargin, String status) {
+        public Device(int id, String name, String type, String pin, int width, int height, int leftMargin, int topMargin, String status, String attachedLED, String triggerPin) {
             this.id = id;
             this.name = name;
             this.type = type;
@@ -57,6 +66,8 @@ public class SaveManager {
             this.leftMargin = leftMargin;
             this.topMargin = topMargin;
             this.status = status;
+            this.attachedLED = attachedLED;
+            this.triggerPin = triggerPin;
         }
     }
 
@@ -77,7 +88,7 @@ public class SaveManager {
             OutputStreamWriter outputWriter=new OutputStreamWriter(fileout);
 
             for(int i = 0; i < devices.size(); i++){
-                outputWriter.write(devices.get(i).id + ";" + devices.get(i).name + ";" + devices.get(i).type + ";" + devices.get(i).pin +  ";" + devices.get(i).width + ";" + devices.get(i).height + ";" + devices.get(i).leftMargin + ";" + devices.get(i).topMargin + ";" + devices.get(i).status + "\n");
+                outputWriter.write(devices.get(i).id + ";" + devices.get(i).name + ";" + devices.get(i).type + ";" + devices.get(i).pin +  ";" + devices.get(i).width + ";" + devices.get(i).height + ";" + devices.get(i).leftMargin + ";" + devices.get(i).topMargin + ";" + devices.get(i).status + ";" + devices.get(i).attachedLED + ";" + devices.get(i).triggerPin + "\n");
             }
             outputWriter.close();
         } catch (Exception e) {
@@ -91,7 +102,7 @@ public class SaveManager {
             FileInputStream fileIn = ctx.openFileInput("preferences.txt");
             InputStreamReader InputRead= new InputStreamReader(fileIn);
 
-            char[] inputBuffer= new char[100];
+            char[] inputBuffer= new char[500];
 
             int charRead;
 
@@ -103,6 +114,8 @@ public class SaveManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        Log.i("trying to read device", "" + s);
 
         String[] lines = s.split("\n");
         String[] line;
@@ -118,7 +131,9 @@ public class SaveManager {
                         parseInt(line[5]),
                         parseInt(line[6]),
                         parseInt(line[7]),
-                        line[8])
+                        line[8],
+                        line[9],
+                        line[10])
                 );
             }
         }
@@ -131,7 +146,7 @@ public class SaveManager {
             OutputStreamWriter outputWriter=new OutputStreamWriter(fileout);
 
             for(int i = 0; i < devices.size(); i++){
-                outputWriter.write(devices.get(i).id + ";" + devices.get(i).name + ";" + devices.get(i).type + ";" + devices.get(i).pin +  ";" + devices.get(i).width + ";" + devices.get(i).height + ";" + devices.get(i).leftMargin + ";" + devices.get(i).topMargin + ";" + devices.get(i).status + "\n");
+                outputWriter.write(devices.get(i).id + ";" + devices.get(i).name + ";" + devices.get(i).type + ";" + devices.get(i).pin +  ";" + devices.get(i).width + ";" + devices.get(i).height + ";" + devices.get(i).leftMargin + ";" + devices.get(i).topMargin + ";" + devices.get(i).status + ";" + devices.get(i).attachedLED + ";" + devices.get(i).triggerPin +"\n");
             }
             outputWriter.close();
         } catch (Exception e) {
@@ -203,6 +218,70 @@ public class SaveManager {
         SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
         try{
             lightInterval = prefs.getInt("lightInterval", 500);
+        }catch (Exception e){
+
+        }
+    }
+
+    public void SaveLightNoti(Context ctx, boolean noti){
+        final String PREFS_NAME = "MyPrefsFile";
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean("lightNoti", noti).apply();
+        lightNoti = noti;
+    }
+
+    public void ReadLightNoti(Context ctx){
+        SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
+        try{
+            lightNoti = prefs.getBoolean("lightNoti", true);
+        }catch (Exception e){
+
+        }
+    }
+
+    public void SaveRangeNoti(Context ctx, boolean noti){
+        final String PREFS_NAME = "MyPrefsFile";
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean("rangeNoti", noti).apply();
+        rangeNoti = noti;
+    }
+
+    public void ReadRangeNoti(Context ctx){
+        SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
+        try{
+            rangeNoti = prefs.getBoolean("rangeNoti", true);
+        }catch (Exception e){
+
+        }
+    }
+
+    public void SaveTempNoti(Context ctx, boolean noti){
+        final String PREFS_NAME = "MyPrefsFile";
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean("tempNoti", noti).apply();
+        tempNoti = noti;
+    }
+
+    public void ReadTempNoti(Context ctx){
+        SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
+        try{
+            tempNoti = prefs.getBoolean("tempNoti", true);
+        }catch (Exception e){
+
+        }
+    }
+
+    public void SaveAutomateLights(Context ctx, boolean automate){
+        final String PREFS_NAME = "MyPrefsFile";
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean("automateLights", automate).apply();
+        automateLights = automate;
+    }
+
+    public void ReadAutomateLights(Context ctx){
+        SharedPreferences prefs = ctx.getSharedPreferences("MyPrefsFile", Context.MODE_PRIVATE);
+        try{
+            automateLights = prefs.getBoolean("automateLights", true);
         }catch (Exception e){
 
         }
