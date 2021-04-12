@@ -15,12 +15,14 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Base64;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -159,8 +161,17 @@ public class HomeFragment extends Fragment {
         rootLayout.addView(tv);
     }
 
+    public boolean isDrag = false;
+
+    final Handler handler = new Handler();
+    Runnable mLongPressed = new Runnable() {
+        public void run() {
+            isDrag = true;
+            Log.i("", "Long press!");
+        }
+    };
+
     private final class ChoiceTouchListener implements View.OnTouchListener {
-        private boolean isDrag = false;
         @SuppressLint("ResourceType")
         public boolean onTouch(View view, MotionEvent event) {
             final int X = (int) event.getRawX();
@@ -170,6 +181,7 @@ public class HomeFragment extends Fragment {
                     RelativeLayout.LayoutParams lParams = (RelativeLayout.LayoutParams) view.getLayoutParams();
                     _xDelta = X - lParams.leftMargin;
                     _yDelta = Y - lParams.topMargin;
+                    handler.postDelayed(mLongPressed, 90);
                     break;
                 case MotionEvent.ACTION_UP:
                     if (!isDrag) {
@@ -198,6 +210,7 @@ public class HomeFragment extends Fragment {
                         }
                         SaveManager.getInstance().SavePreferences(MainActivity.myapp);
                     }
+                    handler.removeCallbacks(mLongPressed);
                     isDrag = false;
                     break;
                 case MotionEvent.ACTION_POINTER_DOWN:
@@ -205,31 +218,37 @@ public class HomeFragment extends Fragment {
                 case MotionEvent.ACTION_POINTER_UP:
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    isDrag = true;
-                    RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) view.getLayoutParams();
-                    layoutParams.leftMargin = X - _xDelta;
-                    layoutParams.topMargin = Y - _yDelta;
-                    SaveManager.devices.get(view.getId()).leftMargin = layoutParams.leftMargin;
-                    SaveManager.devices.get(view.getId()).topMargin = layoutParams.topMargin;
-                    layoutParams.rightMargin = -250;
-                    layoutParams.bottomMargin = -250;
-                    view.setLayoutParams(layoutParams);
+                    //isDrag = true;
+                    //new WaitForDrag().execute();
+                    if (isDrag) {
+                        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) view.getLayoutParams();
+                        layoutParams.leftMargin = X - _xDelta;
+                        layoutParams.topMargin = Y - _yDelta;
+                        SaveManager.devices.get(view.getId()).leftMargin = layoutParams.leftMargin;
+                        SaveManager.devices.get(view.getId()).topMargin = layoutParams.topMargin;
+                        layoutParams.rightMargin = -250;
+                        layoutParams.bottomMargin = -250;
+                        view.setLayoutParams(layoutParams);
 
-                    RelativeLayout.LayoutParams layoutParamsTv = new RelativeLayout.LayoutParams(350, 350);
-                    layoutParamsTv.leftMargin = layoutParams.leftMargin;
-                    layoutParamsTv.topMargin = layoutParams.topMargin - 60;
-                    layoutParamsTv.rightMargin = -250;
-                    layoutParamsTv.bottomMargin = -250;
+                        RelativeLayout.LayoutParams layoutParamsTv = new RelativeLayout.LayoutParams(350, 350);
+                        layoutParamsTv.leftMargin = layoutParams.leftMargin;
+                        layoutParamsTv.topMargin = layoutParams.topMargin - 60;
+                        layoutParamsTv.rightMargin = -250;
+                        layoutParamsTv.bottomMargin = -250;
 
-                    root.findViewWithTag(SaveManager.devices.get(view.getId()).name).setLayoutParams(layoutParamsTv);
+                        root.findViewWithTag(SaveManager.devices.get(view.getId()).name).setLayoutParams(layoutParamsTv);
 
-                    SaveManager.getInstance().SavePreferences(MainActivity.myapp);
+                        SaveManager.getInstance().SavePreferences(MainActivity.myapp);
+                        handler.removeCallbacks(mLongPressed);
+                    }
                     break;
             }
             rootLayout.invalidate();
             return true;
         }
     }
+
+
 
     private final class ParticleLogin extends AsyncTask<Integer, Integer, String> {
         @Override
@@ -372,7 +391,7 @@ public class HomeFragment extends Fragment {
                                             TextView tv = root.findViewWithTag(SaveManager.devices.get(i).name);
                                             if(tv != null){
                                                 String brightness = "";
-                                                if(Double.parseDouble(event.getDataPayload()) < 500){
+                                                if(Double.parseDouble(event.getDataPayload()) < 700){
                                                     brightness = ": dark";
                                                 } else if(Double.parseDouble(event.getDataPayload()) < 1500){
                                                     brightness = ": dim";
@@ -393,25 +412,11 @@ public class HomeFragment extends Fragment {
                                                         notificationManager.notify(6, builder.build());
 
                                                         Log.i("brightness", "" + brightness);
-
+                                                        lightSensorReadings.put(SaveManager.devices.get(i).id, brightness);
+                                                    } else{
                                                         if(!SaveManager.devices.get(i).attachedLED.equals("-") && SaveManager.automateLights){
                                                             if(brightness.equals(": bright")){
                                                                 //turn light on
-                                                                Log.i("in brightness if", "yep");
-                                                                int id = -1;
-                                                                for (int k = 0; k < SaveManager.devices.size(); k++){
-                                                                    if(SaveManager.devices.get(k).pin.equals(SaveManager.devices.get(i).attachedLED)){
-                                                                        id = SaveManager.devices.get(k).id;
-                                                                    }
-                                                                }
-                                                                SaveManager.devices.get(id).status = "true";
-                                                                ImageView imgView = root.findViewById(id);
-                                                                imgView.setImageResource(R.drawable.ic_lamp_on);
-                                                                new LongOperation().execute(id);
-                                                            }
-
-                                                            if(brightness.equals(": dark")){
-                                                                //turn light off
                                                                 int id = -1;
                                                                 for (int k = 0; k < SaveManager.devices.size(); k++){
                                                                     if(SaveManager.devices.get(k).pin.equals(SaveManager.devices.get(i).attachedLED)){
@@ -423,9 +428,21 @@ public class HomeFragment extends Fragment {
                                                                 imgView.setImageResource(R.drawable.ic_lamp_off);
                                                                 new LongOperation().execute(id);
                                                             }
+
+                                                            if(brightness.equals(": dark")){
+                                                                //turn light off
+                                                                int id = -1;
+                                                                for (int k = 0; k < SaveManager.devices.size(); k++){
+                                                                    if(SaveManager.devices.get(k).pin.equals(SaveManager.devices.get(i).attachedLED)){
+                                                                        id = SaveManager.devices.get(k).id;
+                                                                    }
+                                                                }
+                                                                SaveManager.devices.get(id).status = "true";
+                                                                ImageView imgView = root.findViewById(id);
+                                                                imgView.setImageResource(R.drawable.ic_lamp_on);
+                                                                new LongOperation().execute(id);
+                                                            }
                                                         }
-                                                        lightSensorReadings.put(SaveManager.devices.get(i).id, brightness);
-                                                    } else{
                                                         lightSensorReadings.put(SaveManager.devices.get(i).id, brightness);
                                                     }
                                                 }
