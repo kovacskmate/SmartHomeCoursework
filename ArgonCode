@@ -1,0 +1,236 @@
+// This #include statement was automatically added by the Particle IDE.
+#include <HC-SR04.h>
+
+#include <Adafruit_DHT.h>
+
+#define DHTTYPE DHT22
+
+int intervalTemp = 3000;
+int intervalRange = 500;
+int intervalBrightness = 3000;
+unsigned long lastTempCheck = 0;
+unsigned long lastRangeCheck = 0;
+unsigned long lastBrightnessCheck = 0;
+
+int recieveDevice(String command);
+
+int recieveCommand(String command);
+
+int recieveSetInterval(String command);
+
+int recieveDeleteDevices(String command);
+
+String lights = "";
+
+int numberOfTempSensors = 0;
+String tempSensors = "";
+
+String servos = "";
+
+String lightSensors = "";
+int numberOfLightSensors = 0;
+
+String rangeFinders = "";
+int numberOfRangeFinders = 0;
+
+bool canLoop = false;
+
+void setup()
+{
+    Particle.function("recieveDevice", recieveDevice);
+    Particle.function("recieveCommand", recieveCommand);
+    Particle.function("recieveSetInterval", recieveSetInterval);
+    Particle.function("recieveDeleteDevices", recieveDeleteDevices);
+}
+
+void loop()
+{
+    if(canLoop){
+        if (lastTempCheck + intervalTemp < millis()) {
+            lastTempCheck = millis();
+            if(tempSensors != ""){
+                for(int i = 0; i < numberOfTempSensors; i++){
+                    String tempSensor = getValue(tempSensors, ';', i);
+                    String pin = getValue(tempSensor, ',', 0);
+                    String status = getValue(tempSensor, ',', 1);
+                    
+                    DHT dht(pin.toInt(), DHTTYPE);
+                    dht.begin();
+                    double temp = dht.getTempCelcius();
+                    Particle.publish("tempSensor" + pin, String(temp));
+                }
+            }
+        }
+        
+        if (lastRangeCheck + intervalRange < millis()) {
+            lastRangeCheck = millis();
+            if(rangeFinders != ""){
+                for(int i = 0; i < numberOfRangeFinders; i++){
+                    String rangeFinder = getValue(rangeFinders, ';', i);
+                    String pin = getValue(rangeFinder, ',', 0);
+                    String triggerPin = getValue(rangeFinder, ',', 2);
+                    
+                    HC_SR04 myRangefinder = HC_SR04(triggerPin.toInt(), pin.toInt());
+                    myRangefinder.init();
+                    unsigned long start = micros();
+                    float inch = myRangefinder.distInch();
+                    unsigned long calcTime = micros() - start;
+                    Particle.publish("rangeFinder" + pin, String(inch));
+                }
+            }
+        }
+        
+        if (lastBrightnessCheck + intervalBrightness < millis()) {
+            lastBrightnessCheck = millis();
+            if(lightSensors != ""){
+                for(int i = 0; i < numberOfLightSensors; i++){
+                    String lightSensor = getValue(lightSensors, ';', i);
+                    String pin = getValue(lightSensor, ',', 0);
+                    
+                    Particle.publish("lightSensor" + pin, String(analogRead(pin.toInt())));
+                }
+            }
+        }
+    }
+}
+
+
+//from https://arduino.stackexchange.com/questions/1013/how-do-i-split-an-incoming-string
+String getValue(String data, char separator, int index)
+{
+    int found = 0;
+    int strIndex[] = { 0, -1 };
+    int maxIndex = data.length() - 1;
+    for (int i = 0; i <= maxIndex && found <= index; i++) {
+        if (data.charAt(i) == separator || i == maxIndex) {
+            found++;
+            strIndex[0] = strIndex[1] + 1;
+            strIndex[1] = (i == maxIndex) ? i+1 : i;
+        }
+    }
+    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+}
+
+int recieveDevice(String args)
+{
+    String type = getValue(args, ',', 0);
+    String pin = getValue(args, ',', 1);
+    String status = getValue(args, ',', 2);
+    String attachedLED = getValue(args, ',', 3);
+    String triggerPin = getValue(args, ',', 4);
+    Particle.publish("recievedDevice", args, PRIVATE);
+    if(type == "Light"){
+        if(!strstr(lights,pin)){
+            lights = lights + pin + "," + status + ";";
+        }
+    } else if(type == "Temperature sensor"){
+        if(!strstr(tempSensors,pin))
+        {
+            numberOfTempSensors++;
+            tempSensors = tempSensors + pin + "," + status + ";";    
+        }
+    } else if(type == "Door"){
+        if(!strstr(servos,pin)){
+            servos = servos + pin + "," + status + ";";    
+        }
+    } else if(type == "Light sensor"){
+        if(!strstr(lightSensors,pin)){
+            numberOfLightSensors++;
+            //does not have to know about the attachedLED
+            lightSensors = lightSensors + pin + "," + status + "," + attachedLED + ";";     
+        }
+    } else{
+        if(!strstr(rangeFinders,pin)){
+            numberOfRangeFinders++;
+            rangeFinders = rangeFinders + pin + "," + status + "," + triggerPin + ";";     
+        }
+    }
+    canLoop = true;
+    return 1;
+}
+
+int recieveCommand(String args)
+{
+    //need device id for identification?
+    //need read frequency for sensors?
+    String type = getValue(args, ',', 0);
+    int pin = getValue(args, ',', 1).toInt();
+    String status = getValue(args, ',', 2);
+    //Particle.publish("recievedCommand", getValue(args, ',', 1), PRIVATE);
+    if(type == "Light"){
+        OperateLight(pin, status);
+    } else if (type == "Door"){
+        OperateServo(pin, status);
+    } else if (type == "Temperature sensor"){
+        //adjust read interval?
+    } else if (type == "Light sensor"){
+        //adjust read interval?
+    } else {
+        //range finder
+        //adjust read interval?
+    } 
+    return 1;
+}
+
+int recieveSetInterval(String args){
+    Particle.publish("recieveSetInterval", args, PRIVATE);
+    float recievedIntervalTemp = getValue(args, ',', 0).toInt();
+    float recievedIntervalRange = getValue(args, ',', 1).toInt();
+    float recievedBrightnessInterval = getValue(args, ',', 2).toInt();
+    if(!isnan(recievedIntervalTemp)){
+        intervalTemp = recievedIntervalTemp;   
+    }
+    if(!isnan(recievedIntervalRange)){
+        intervalRange = recievedIntervalRange;   
+    }
+    if(!isnan(recievedBrightnessInterval)){
+        Particle.publish("brightness interval", getValue(args, ',', 2), PRIVATE);
+        intervalBrightness = recievedBrightnessInterval;
+    }
+    return 1;
+}
+
+int recieveDeleteDevices(String args){
+    lights = "";
+    
+    numberOfTempSensors = 0;
+    tempSensors = "";
+    
+    servos = "";
+    
+    lightSensors = "";
+    numberOfLightSensors = 0;
+    
+    rangeFinders = "";
+    numberOfRangeFinders = 0;
+    return 1;
+}
+
+
+void OperateLight(int pin, String status){
+    pinMode(pin, OUTPUT);
+    if(status == "true"){
+        digitalWrite(pin, HIGH);
+    } else {
+        digitalWrite(pin, LOW);  
+    } 
+}
+
+void OperateServo(int pin, String status){
+    int pos;
+    Servo myServo;
+    myServo.attach(pin);
+    if(status == "true"){
+        for(pos = 0; pos < 180; pos += 1)   // goes from 0 degrees to 180 degrees 
+        {                                   // in steps of 1 degree 
+            myServo.write(pos);               // tell servo to go to position in variable 'pos' 
+            delay(15);                        // waits 15ms for the servo to reach the position 
+        } 
+    } else {
+        for(pos = 180; pos >= 1; pos -= 1)      // goes from 180 degrees to 0 degrees 
+        {                                
+            myServo.write(pos);               // tell servo to go to position in variable 'pos' 
+            delay(15);                        // waits 15ms for the servo to reach the position 
+        } 
+    }
+}
